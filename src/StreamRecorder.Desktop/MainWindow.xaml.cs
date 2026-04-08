@@ -71,7 +71,9 @@ public partial class MainWindow : global::System.Windows.Window
         if (!_allowExit && _viewModel.Settings.MinimizeToTrayOnClose)
         {
             e.Cancel = true;
-            HideToTray("程序已缩到托盘。双击托盘图标可恢复窗口。", normalizeWindowState: false);
+            HideToTray(GetTrayNotificationMessage(
+                "程序已缩到托盘。双击托盘图标可恢复窗口。",
+                _viewModel.Settings.SystemCloseToTrayNotificationEnabled), normalizeWindowState: false);
             return;
         }
 
@@ -89,7 +91,9 @@ public partial class MainWindow : global::System.Windows.Window
     {
         if (WindowState == global::System.Windows.WindowState.Minimized && _viewModel.Settings.MinimizeToTrayOnMinimize)
         {
-            HideToTray("程序已最小化到托盘。双击托盘图标可恢复窗口。", normalizeWindowState: false);
+            HideToTray(GetTrayNotificationMessage(
+                "程序已最小化到托盘。双击托盘图标可恢复窗口。",
+                _viewModel.Settings.SystemMinimizeToTrayNotificationEnabled), normalizeWindowState: false);
         }
     }
 
@@ -125,6 +129,13 @@ public partial class MainWindow : global::System.Windows.Window
         {
             WindowState = global::System.Windows.WindowState.Normal;
         }
+    }
+
+    private string? GetTrayNotificationMessage(string message, bool typeEnabled)
+    {
+        return _viewModel.Settings.SystemNotificationEnabled && typeEnabled
+            ? message
+            : null;
     }
 
     private void ApplyInitialWindowBounds()

@@ -542,6 +542,7 @@ class StreamRecorderWorkerApp:
                 job.error_message = error_line or f"ffmpeg 退出码: {process.returncode}"
                 job.speed_text = "X KB/s"
                 self.log(f"录制异常结束: {job.url} | {job.error_message}")
+                await self._notify_event(job, "error")
 
             job.updated_at = utc_now()
             self.persist()
@@ -687,7 +688,21 @@ class StreamRecorderWorkerApp:
 
     async def _notify_event(self, job: RecordingJob, message_type: str) -> None:
         title, content = self._build_notification_message(job, message_type)
-        if self.settings.get("system_notification_enabled"):
+        should_notify_desktop = self.settings.get("system_notification_enabled") and (
+            (
+                message_type == "start"
+                and self.settings.get("system_stream_start_notification_enabled", True)
+            )
+            or (
+                message_type == "end"
+                and self.settings.get("system_stream_end_notification_enabled", True)
+            )
+            or (
+                message_type == "error"
+                and self.settings.get("system_error_notification_enabled", True)
+            )
+        )
+        if should_notify_desktop:
             await self.writer.write(
                 event("desktop_notification", {"title": title, "message": content})
             )
@@ -696,11 +711,18 @@ class StreamRecorderWorkerApp:
             return
 
         should_push = (
-            message_type == "start"
-            and self.settings.get("stream_start_notification_enabled")
-        ) or (
-            message_type == "end"
-            and self.settings.get("stream_end_notification_enabled")
+            (
+                message_type == "start"
+                and self.settings.get("stream_start_notification_enabled")
+            )
+            or (
+                message_type == "end"
+                and self.settings.get("stream_end_notification_enabled")
+            )
+            or (
+                message_type == "error"
+                and self.settings.get("stream_error_notification_enabled")
+            )
         )
         if should_push:
             await self._push_messages(title, content)
@@ -716,12 +738,20 @@ class StreamRecorderWorkerApp:
                 self.settings.get("custom_stream_start_content") or ""
             ).strip()
             default_content = f"检测到 {job.streamer_name} 正在直播，已开始录制。"
-        else:
+        elif message_type == "end":
             template = str(self.settings.get("custom_stream_end_content") or "").strip()
             default_content = f"{job.streamer_name} 的录制已结束。"
+        else:
+            template = str(
+                self.settings.get("custom_stream_error_content") or ""
+            ).strip()
+            default_content = f"{job.streamer_name} 的录制异常结束：{job.error_message or '请查看日志。'}"
         content = template or default_content
-        return title, content.replace("{streamer_name}", job.streamer_name).replace(
-            "{title}", job.live_title or job.title
+        return (
+            title,
+            content.replace("{streamer_name}", job.streamer_name)
+            .replace("{title}", job.live_title or job.title)
+            .replace("{error}", job.error_message or ""),
         )
 
     def _is_any_push_channel_enabled(self) -> bool:

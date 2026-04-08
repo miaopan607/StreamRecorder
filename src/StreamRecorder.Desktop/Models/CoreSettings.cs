@@ -32,12 +32,19 @@ public sealed class CoreSettings : ObservableObject
     private string _customScriptCommand = string.Empty;
     private string _defaultPlatformWithProxy = string.Empty;
     private bool _systemNotificationEnabled = true;
+    private bool _systemStreamStartNotificationEnabled = true;
+    private bool _systemStreamEndNotificationEnabled;
+    private bool _systemErrorNotificationEnabled;
+    private bool _systemMinimizeToTrayNotificationEnabled;
+    private bool _systemCloseToTrayNotificationEnabled;
     private bool _streamStartNotificationEnabled;
     private bool _streamEndNotificationEnabled;
+    private bool _streamErrorNotificationEnabled;
     private bool _onlyNotifyNoRecord;
     private string _customNotificationTitle = string.Empty;
     private string _customStreamStartContent = string.Empty;
     private string _customStreamEndContent = string.Empty;
+    private string _customStreamErrorContent = string.Empty;
     private bool _dingtalkEnabled;
     private bool _wechatEnabled;
     private bool _barkEnabled;
@@ -123,9 +130,21 @@ public sealed class CoreSettings : ObservableObject
 
     public bool SystemNotificationEnabled { get => _systemNotificationEnabled; set => SetProperty(ref _systemNotificationEnabled, value); }
 
+    public bool SystemStreamStartNotificationEnabled { get => _systemStreamStartNotificationEnabled; set => SetProperty(ref _systemStreamStartNotificationEnabled, value); }
+
+    public bool SystemStreamEndNotificationEnabled { get => _systemStreamEndNotificationEnabled; set => SetProperty(ref _systemStreamEndNotificationEnabled, value); }
+
+    public bool SystemErrorNotificationEnabled { get => _systemErrorNotificationEnabled; set => SetProperty(ref _systemErrorNotificationEnabled, value); }
+
+    public bool SystemMinimizeToTrayNotificationEnabled { get => _systemMinimizeToTrayNotificationEnabled; set => SetProperty(ref _systemMinimizeToTrayNotificationEnabled, value); }
+
+    public bool SystemCloseToTrayNotificationEnabled { get => _systemCloseToTrayNotificationEnabled; set => SetProperty(ref _systemCloseToTrayNotificationEnabled, value); }
+
     public bool StreamStartNotificationEnabled { get => _streamStartNotificationEnabled; set => SetProperty(ref _streamStartNotificationEnabled, value); }
 
     public bool StreamEndNotificationEnabled { get => _streamEndNotificationEnabled; set => SetProperty(ref _streamEndNotificationEnabled, value); }
+
+    public bool StreamErrorNotificationEnabled { get => _streamErrorNotificationEnabled; set => SetProperty(ref _streamErrorNotificationEnabled, value); }
 
     public bool OnlyNotifyNoRecord { get => _onlyNotifyNoRecord; set => SetProperty(ref _onlyNotifyNoRecord, value); }
 
@@ -134,6 +153,8 @@ public sealed class CoreSettings : ObservableObject
     public string CustomStreamStartContent { get => _customStreamStartContent; set => SetProperty(ref _customStreamStartContent, value); }
 
     public string CustomStreamEndContent { get => _customStreamEndContent; set => SetProperty(ref _customStreamEndContent, value); }
+
+    public string CustomStreamErrorContent { get => _customStreamErrorContent; set => SetProperty(ref _customStreamErrorContent, value); }
 
     public bool DingtalkEnabled { get => _dingtalkEnabled; set => SetProperty(ref _dingtalkEnabled, value); }
 
@@ -227,12 +248,19 @@ public sealed class CoreSettings : ObservableObject
         CustomScriptCommand = GetString(element, "custom_script_command");
         DefaultPlatformWithProxy = GetString(element, "default_platform_with_proxy");
         SystemNotificationEnabled = GetBool(element, "system_notification_enabled", true);
+        SystemStreamStartNotificationEnabled = GetBool(element, "system_stream_start_notification_enabled", true);
+        SystemStreamEndNotificationEnabled = GetBool(element, "system_stream_end_notification_enabled");
+        SystemErrorNotificationEnabled = GetBool(element, "system_error_notification_enabled");
+        SystemMinimizeToTrayNotificationEnabled = GetBool(element, "system_minimize_to_tray_notification_enabled");
+        SystemCloseToTrayNotificationEnabled = GetBool(element, "system_close_to_tray_notification_enabled");
         StreamStartNotificationEnabled = GetBool(element, "stream_start_notification_enabled");
         StreamEndNotificationEnabled = GetBool(element, "stream_end_notification_enabled");
+        StreamErrorNotificationEnabled = GetBool(element, "stream_error_notification_enabled");
         OnlyNotifyNoRecord = GetBool(element, "only_notify_no_record");
         CustomNotificationTitle = GetString(element, "custom_notification_title");
         CustomStreamStartContent = GetString(element, "custom_stream_start_content");
         CustomStreamEndContent = GetString(element, "custom_stream_end_content");
+        CustomStreamErrorContent = GetString(element, "custom_stream_error_content");
         DingtalkEnabled = GetBool(element, "dingtalk_enabled");
         WechatEnabled = GetBool(element, "wechat_enabled");
         BarkEnabled = GetBool(element, "bark_enabled");
@@ -297,12 +325,19 @@ public sealed class CoreSettings : ObservableObject
             ["custom_script_command"] = CustomScriptCommand,
             ["default_platform_with_proxy"] = DefaultPlatformWithProxy,
             ["system_notification_enabled"] = SystemNotificationEnabled,
+            ["system_stream_start_notification_enabled"] = SystemStreamStartNotificationEnabled,
+            ["system_stream_end_notification_enabled"] = SystemStreamEndNotificationEnabled,
+            ["system_error_notification_enabled"] = SystemErrorNotificationEnabled,
+            ["system_minimize_to_tray_notification_enabled"] = SystemMinimizeToTrayNotificationEnabled,
+            ["system_close_to_tray_notification_enabled"] = SystemCloseToTrayNotificationEnabled,
             ["stream_start_notification_enabled"] = StreamStartNotificationEnabled,
             ["stream_end_notification_enabled"] = StreamEndNotificationEnabled,
+            ["stream_error_notification_enabled"] = StreamErrorNotificationEnabled,
             ["only_notify_no_record"] = OnlyNotifyNoRecord,
             ["custom_notification_title"] = CustomNotificationTitle,
             ["custom_stream_start_content"] = CustomStreamStartContent,
             ["custom_stream_end_content"] = CustomStreamEndContent,
+            ["custom_stream_error_content"] = CustomStreamErrorContent,
             ["dingtalk_enabled"] = DingtalkEnabled,
             ["wechat_enabled"] = WechatEnabled,
             ["bark_enabled"] = BarkEnabled,

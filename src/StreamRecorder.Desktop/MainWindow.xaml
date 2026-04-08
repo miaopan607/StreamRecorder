@@ -712,23 +712,39 @@
                                 <WrapPanel Margin="12,0,12,18">
                                     <GroupBox Style="{StaticResource SettingsGroupBoxStyle}" Header="系统通知" Margin="0,0,12,12" Padding="14" Width="340">
                                         <StackPanel>
-                                            <WrapPanel Margin="0,8,0,0">
-                                                <CheckBox Content="启用系统状态栏通知" IsChecked="{Binding Settings.SystemNotificationEnabled}" />
-                                                <CheckBox Content="开播通知" IsChecked="{Binding Settings.StreamStartNotificationEnabled}" />
-                                                <CheckBox Content="下播通知" IsChecked="{Binding Settings.StreamEndNotificationEnabled}" />
-                                                <CheckBox Content="仅通知不录制" IsChecked="{Binding Settings.OnlyNotifyNoRecord}" />
+                                            <CheckBox Margin="0,8,0,0" Content="启用系统通知" IsChecked="{Binding Settings.SystemNotificationEnabled}" />
+                                            <TextBlock Margin="0,12,0,0" Text="系统通知类型" />
+                                            <WrapPanel Margin="0,6,0,0">
+                                                <CheckBox Margin="0,0,18,8" Content="开播通知" IsChecked="{Binding Settings.SystemStreamStartNotificationEnabled}" />
+                                                <CheckBox Margin="0,0,18,8" Content="下播通知" IsChecked="{Binding Settings.SystemStreamEndNotificationEnabled}" />
+                                                <CheckBox Margin="0,0,18,8" Content="异常通知" IsChecked="{Binding Settings.SystemErrorNotificationEnabled}" />
                                             </WrapPanel>
+                                            <TextBlock Margin="0,12,0,0" Text="托盘提示类型" />
+                                            <WrapPanel Margin="0,6,0,0">
+                                                <CheckBox Margin="0,0,18,8" Content="最小化到托盘通知" IsChecked="{Binding Settings.SystemMinimizeToTrayNotificationEnabled}" />
+                                                <CheckBox Margin="0,0,18,8" Content="关闭到托盘通知" IsChecked="{Binding Settings.SystemCloseToTrayNotificationEnabled}" />
+                                            </WrapPanel>
+                                            <CheckBox Margin="0,4,0,0" Content="开播时仅通知不录制" IsChecked="{Binding Settings.OnlyNotifyNoRecord}" />
                                             <TextBlock Margin="0,12,0,0" Text="自定义通知标题" />
                                             <TextBox Text="{Binding Settings.CustomNotificationTitle, UpdateSourceTrigger=PropertyChanged}" />
                                             <TextBlock Margin="0,12,0,0" Text="开播通知内容" />
                                             <TextBox Text="{Binding Settings.CustomStreamStartContent, UpdateSourceTrigger=PropertyChanged}" />
                                             <TextBlock Margin="0,12,0,0" Text="下播通知内容" />
                                             <TextBox Text="{Binding Settings.CustomStreamEndContent, UpdateSourceTrigger=PropertyChanged}" />
+                                            <TextBlock Margin="0,12,0,0" Text="异常通知内容" />
+                                            <TextBox Text="{Binding Settings.CustomStreamErrorContent, UpdateSourceTrigger=PropertyChanged}" />
                                         </StackPanel>
                                     </GroupBox>
 
                                     <GroupBox Style="{StaticResource SettingsGroupBoxStyle}" Header="推送通道" Margin="0,0,12,12" Padding="14" Width="340">
                                         <StackPanel>
+                                            <TextBlock Margin="0,8,0,0" Text="推送类型" />
+                                            <WrapPanel Margin="0,6,0,0">
+                                                <CheckBox Margin="0,0,18,8" Content="开播推送" IsChecked="{Binding Settings.StreamStartNotificationEnabled}" />
+                                                <CheckBox Margin="0,0,18,8" Content="下播推送" IsChecked="{Binding Settings.StreamEndNotificationEnabled}" />
+                                                <CheckBox Margin="0,0,18,8" Content="异常推送" IsChecked="{Binding Settings.StreamErrorNotificationEnabled}" />
+                                            </WrapPanel>
+                                            <TextBlock Margin="0,8,0,0" Text="推送通道" />
                                             <WrapPanel Margin="0,8,0,0">
                                                 <CheckBox Content="钉钉" IsChecked="{Binding Settings.DingtalkEnabled}" />
                                                 <CheckBox Content="企业微信" IsChecked="{Binding Settings.WechatEnabled}" />
