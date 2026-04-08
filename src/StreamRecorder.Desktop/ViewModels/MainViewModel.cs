@@ -750,6 +750,13 @@ public sealed class MainViewModel : ObservableObject, IAsyncDisposable
     {
         await global::System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
         {
+            var selectedJobKey = GetJobSelectionKey(SelectedJob);
+            var selectedBatchKeys = Jobs
+                .Where(job => job.IsBatchSelected)
+                .Select(GetJobSelectionKey)
+                .Where(static key => !string.IsNullOrWhiteSpace(key))
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
             if (snapshot.TryGetProperty("app", out var app))
             {
                 WorkerVersionText = $"StreamRecorder 核心服务 {app.GetProperty("version").GetString()} | Python {app.GetProperty("python_version").GetString()}";
@@ -775,9 +782,20 @@ public sealed class MainViewModel : ObservableObject, IAsyncDisposable
             {
                 foreach (var jobElement in jobsElement.EnumerateArray())
                 {
-                    Jobs.Add(RecordingJob.FromJson(jobElement));
+                    var job = RecordingJob.FromJson(jobElement);
+                    var jobKey = GetJobSelectionKey(job);
+                    if (!string.IsNullOrWhiteSpace(jobKey) && selectedBatchKeys.Contains(jobKey))
+                    {
+                        job.IsBatchSelected = true;
+                    }
+
+                    Jobs.Add(job);
                 }
             }
+
+            SelectedJob = string.IsNullOrWhiteSpace(selectedJobKey)
+                ? null
+                : Jobs.FirstOrDefault(job => string.Equals(GetJobSelectionKey(job), selectedJobKey, StringComparison.OrdinalIgnoreCase));
 
             JobCountText = $"{Jobs.Count} 个任务";
             MonitoringCountText = $"{Jobs.Count(job => job.MonitorStatus)} 个监控中";
@@ -849,6 +867,18 @@ public sealed class MainViewModel : ObservableObject, IAsyncDisposable
     private static bool GetBool(JsonElement element, string propertyName)
     {
         return element.TryGetProperty(propertyName, out var property) && property.ValueKind == JsonValueKind.True;
+    }
+
+    private static string GetJobSelectionKey(RecordingJob? job)
+    {
+        if (job is null)
+        {
+            return string.Empty;
+        }
+
+        return !string.IsNullOrWhiteSpace(job.Id)
+            ? job.Id
+            : job.Url.Trim();
     }
 
     public async Task ShutdownAsync()
