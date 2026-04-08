@@ -160,19 +160,19 @@ public partial class MainWindow : global::System.Windows.Window
     private void ApplyInitialWindowBounds()
     {
         const double edgePadding = 48;
-        const double fallbackMinWidth = 720;
-        const double fallbackMinHeight = 480;
-
         var workArea = SystemParameters.WorkArea;
-        var availableWidth = Math.Max(fallbackMinWidth, workArea.Width - edgePadding);
-        var availableHeight = Math.Max(fallbackMinHeight, workArea.Height - edgePadding);
+        var availableWidth = Math.Max(0, workArea.Width - edgePadding);
+        var availableHeight = Math.Max(0, workArea.Height - edgePadding);
 
-        MinWidth = Math.Min(MinWidth, availableWidth);
-        MinHeight = Math.Min(MinHeight, availableHeight);
-        MaxWidth = availableWidth;
-        MaxHeight = availableHeight;
-        Width = Math.Min(Math.Max(Width, MinWidth), availableWidth);
-        Height = Math.Min(Math.Max(Height, MinHeight), availableHeight);
+        if (availableWidth > 0)
+        {
+            Width = Math.Min(Width, availableWidth);
+        }
+
+        if (availableHeight > 0)
+        {
+            Height = Math.Min(Height, availableHeight);
+        }
     }
 
     private async void AddJobButton_Click(object sender, global::System.Windows.RoutedEventArgs e)
@@ -979,8 +979,6 @@ public partial class MainWindow : global::System.Windows.Window
             Title = $"任务详细信息 - {job.DisplayTitle}",
             Width = 760,
             Height = 560,
-            MinWidth = 560,
-            MinHeight = 420,
             WindowStartupLocation = WindowStartupLocation.CenterOwner,
             Background = new SolidColorBrush(global::System.Windows.Media.Color.FromRgb(247, 242, 232)),
             Content = layoutRoot,
