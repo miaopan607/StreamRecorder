@@ -131,6 +131,25 @@ public partial class MainWindow : global::System.Windows.Window
         }
     }
 
+    public void BringToFront()
+    {
+        if (_trayService is not null)
+        {
+            _trayService.RestoreWindow();
+        }
+        else
+        {
+            RestoreWindowVisibility();
+            ShowActivated = true;
+            Show();
+            Activate();
+        }
+
+        Topmost = true;
+        Topmost = false;
+        Focus();
+    }
+
     private string? GetTrayNotificationMessage(string message, bool typeEnabled)
     {
         return _viewModel.Settings.SystemNotificationEnabled && typeEnabled
