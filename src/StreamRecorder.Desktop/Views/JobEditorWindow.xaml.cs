@@ -31,7 +31,7 @@ public partial class JobEditorWindow : global::System.Windows.Window
         SelectComboValue(FormatComboBox, _settings.VideoFormat);
         SegmentCheckBox.IsChecked = _settings.SegmentedRecordingEnabled;
         SegmentTimeTextBox.Text = _settings.VideoSegmentTime;
-        RecordingDirTextBox.Text = _settings.LiveSavePath;
+        RecordingDirTextBox.Text = string.Empty;
     }
 
     private void LoadExistingJob(RecordingJob job)
@@ -165,7 +165,7 @@ public partial class JobEditorWindow : global::System.Windows.Window
                 MonitorStatus = true,
                 ScheduledRecording = false,
                 MonitorHours = "5",
-                RecordingDir = _settings.LiveSavePath,
+                RecordingDir = string.Empty,
                 EnabledMessagePush = true,
                 OnlyNotifyNoRecord = false,
                 FlvUseDirectDownload = _settings.FlvUseDirectDownload,

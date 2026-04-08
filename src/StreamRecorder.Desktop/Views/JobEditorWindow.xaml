@@ -51,6 +51,7 @@
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
                         </Grid.RowDefinitions>
 
                         <TextBlock Grid.Row="0" Grid.Column="0" Margin="0,8,12,8" VerticalAlignment="Center" Text="直播间链接" />
@@ -82,17 +83,24 @@
                         <TextBlock Grid.Row="4" Grid.Column="0" Margin="0,8,12,8" VerticalAlignment="Center" Text="保存目录" />
                         <TextBox x:Name="RecordingDirTextBox" Grid.Row="4" Grid.Column="1" Margin="0,8,0,8" />
 
-                        <TextBlock Grid.Row="5" Grid.Column="0" Margin="0,8,12,8" VerticalAlignment="Center" Text="分段时长（秒）" />
-                        <TextBox x:Name="SegmentTimeTextBox" Grid.Row="5" Grid.Column="1" Margin="0,8,0,8" />
+                        <TextBlock Grid.Row="5"
+                                   Grid.Column="1"
+                                   Margin="0,0,0,8"
+                                   Foreground="#5E6C6F"
+                                   Text="留空时按默认保存路径自动分平台和主播"
+                                   TextWrapping="Wrap" />
 
-                        <TextBlock Grid.Row="6" Grid.Column="0" Margin="0,8,12,8" VerticalAlignment="Center" Text="定时开始时间" />
-                        <TextBox x:Name="ScheduledStartTextBox" Grid.Row="6" Grid.Column="1" Margin="0,8,0,8" />
+                        <TextBlock Grid.Row="6" Grid.Column="0" Margin="0,8,12,8" VerticalAlignment="Center" Text="分段时长（秒）" />
+                        <TextBox x:Name="SegmentTimeTextBox" Grid.Row="6" Grid.Column="1" Margin="0,8,0,8" />
 
-                        <TextBlock Grid.Row="7" Grid.Column="0" Margin="0,8,12,8" VerticalAlignment="Center" Text="监控小时数" />
-                        <TextBox x:Name="MonitorHoursTextBox" Grid.Row="7" Grid.Column="1" Margin="0,8,0,8" />
+                        <TextBlock Grid.Row="7" Grid.Column="0" Margin="0,8,12,8" VerticalAlignment="Center" Text="定时开始时间" />
+                        <TextBox x:Name="ScheduledStartTextBox" Grid.Row="7" Grid.Column="1" Margin="0,8,0,8" />
 
-                        <TextBlock Grid.Row="8" Grid.Column="0" Margin="0,8,12,8" VerticalAlignment="Top" Text="开关项" />
-                        <WrapPanel Grid.Row="8" Grid.Column="1" Margin="0,8,0,8">
+                        <TextBlock Grid.Row="8" Grid.Column="0" Margin="0,8,12,8" VerticalAlignment="Center" Text="监控小时数" />
+                        <TextBox x:Name="MonitorHoursTextBox" Grid.Row="8" Grid.Column="1" Margin="0,8,0,8" />
+
+                        <TextBlock Grid.Row="9" Grid.Column="0" Margin="0,8,12,8" VerticalAlignment="Top" Text="开关项" />
+                        <WrapPanel Grid.Row="9" Grid.Column="1" Margin="0,8,0,8">
                             <CheckBox x:Name="MonitorCheckBox" Margin="0,0,18,8" Content="立即开始监控" IsChecked="True" />
                             <CheckBox x:Name="SegmentCheckBox" Margin="0,0,18,8" Content="启用分段录制" />
                             <CheckBox x:Name="ScheduledCheckBox" Margin="0,0,18,8" Content="启用定时录制" />
@@ -101,7 +109,7 @@
                             <CheckBox x:Name="DirectDownloadCheckBox" Margin="0,0,18,8" Content="使用 FLV 直连下载" />
                         </WrapPanel>
 
-                        <Border Grid.Row="9"
+                        <Border Grid.Row="10"
                                 Grid.Column="0"
                                 Grid.ColumnSpan="2"
                                 Margin="0,16,0,0"

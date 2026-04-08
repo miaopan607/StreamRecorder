@@ -549,7 +549,7 @@ public partial class MainWindow : global::System.Windows.Window
         EditorTitleTextBlock.Text = "添加任务";
         UrlTextBox.Text = string.Empty;
         StreamerNameTextBox.Text = string.Empty;
-        RecordingDirTextBox.Text = _viewModel.Settings.LiveSavePath;
+        RecordingDirTextBox.Text = string.Empty;
         SegmentTimeTextBox.Text = _viewModel.Settings.VideoSegmentTime;
         ScheduledStartTextBox.Text = string.Empty;
         MonitorHoursTextBox.Text = "5";
@@ -671,7 +671,7 @@ public partial class MainWindow : global::System.Windows.Window
                 MonitorStatus = true,
                 ScheduledRecording = false,
                 MonitorHours = "5",
-                RecordingDir = _viewModel.Settings.LiveSavePath,
+                RecordingDir = string.Empty,
                 EnabledMessagePush = true,
                 OnlyNotifyNoRecord = false,
                 FlvUseDirectDownload = _viewModel.Settings.FlvUseDirectDownload,

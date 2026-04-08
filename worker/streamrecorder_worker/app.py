@@ -575,20 +575,21 @@ class StreamRecorderWorkerApp:
             await process.wait()
 
     def _build_output_dir(self, job: RecordingJob, stream_info: Any) -> Path:
+        base_dir = self._get_default_output_dir()
         if job.recording_dir:
-            return self._resolve_output_path(job.recording_dir)
-
-        base_dir_text = str(self.settings.get("live_save_path") or "").strip()
-        if not base_dir_text:
-            base_dir = self.store.data_root / "recordings"
-        else:
-            base_dir = self._resolve_output_path(base_dir_text)
+            job_dir = self._resolve_output_path(job.recording_dir)
+            # Older desktop builds stored the global save root as a task path,
+            # which accidentally bypassed the automatic folder naming rules.
+            if not self._should_use_default_folder_layout(
+                job, stream_info, job_dir, base_dir
+            ):
+                return job_dir
 
         anchor_name = self._sanitize_name(
             stream_info.anchor_name or job.streamer_name or "直播间"
         )
         platform_name = self._sanitize_name(
-            job.platform or stream_info.platform or "直播"
+            str(getattr(stream_info, "platform", "") or job.platform or "直播")
         )
         folder = base_dir
         if self.settings.get("folder_name_platform"):
@@ -602,6 +603,101 @@ class StreamRecorderWorkerApp:
         ):
             folder = folder / self._sanitize_name(stream_info.title)
         return folder
+
+    def _get_default_output_dir(self) -> Path:
+        base_dir_text = str(self.settings.get("live_save_path") or "").strip()
+        if not base_dir_text:
+            return self.store.data_root / "recordings"
+        return self._resolve_output_path(base_dir_text)
+
+    def _should_use_default_folder_layout(
+        self,
+        job: RecordingJob,
+        stream_info: Any,
+        job_dir: Path,
+        base_dir: Path,
+    ) -> bool:
+        if not any(
+            self.settings.get(setting)
+            for setting in (
+                "folder_name_platform",
+                "folder_name_author",
+                "folder_name_time",
+                "folder_name_title",
+            )
+        ):
+            return False
+
+        resolved_job_dir = job_dir.resolve(strict=False)
+        resolved_base_dir = base_dir.resolve(strict=False)
+        if resolved_job_dir == resolved_base_dir:
+            return True
+
+        return self._matches_legacy_auto_output_dir(
+            job,
+            stream_info,
+            resolved_job_dir,
+            resolved_base_dir,
+        )
+
+    def _matches_legacy_auto_output_dir(
+        self,
+        job: RecordingJob,
+        stream_info: Any,
+        job_dir: Path,
+        base_dir: Path,
+    ) -> bool:
+        # Buggy desktop builds wrote auto-generated "base/platform/anchor" paths
+        # into the task itself. Treat that shape as auto layout instead of custom.
+        if (
+            not self.settings.get("folder_name_platform")
+            or not self.settings.get("folder_name_author")
+            or self.settings.get("folder_name_time")
+            or self.settings.get("folder_name_title")
+        ):
+            return False
+
+        try:
+            relative_dir = job_dir.relative_to(base_dir)
+        except ValueError:
+            return False
+
+        if len(relative_dir.parts) != 2:
+            return False
+
+        platform_dir, anchor_dir = relative_dir.parts
+        expected_anchor = self._sanitize_name(
+            stream_info.anchor_name or job.streamer_name or "直播间"
+        )
+        if anchor_dir != expected_anchor:
+            return False
+
+        return platform_dir in self._get_platform_dir_candidates(job, stream_info)
+
+    def _get_platform_dir_candidates(
+        self,
+        job: RecordingJob,
+        stream_info: Any,
+    ) -> set[str]:
+        candidates: set[str] = set()
+        raw_values = {
+            str(getattr(stream_info, "platform", "") or "").strip(),
+            str(job.platform or "").strip(),
+            str(job.platform_key or "").strip(),
+        }
+
+        platform_key = str(job.platform_key or "").strip()
+        if platform_key:
+            raw_values.add(platform_key.title())
+
+        for value in raw_values:
+            if not value:
+                continue
+            candidates.add(self._sanitize_name(value))
+            if value.endswith("直播"):
+                candidates.add(self._sanitize_name(value[: -len("直播")]))
+
+        return {value for value in candidates if value}
 
     def _resolve_output_path(self, path_text: str) -> Path:
         path = Path(path_text).expanduser()
@@ -625,7 +721,12 @@ class StreamRecorderWorkerApp:
             template.replace("{anchor_name}", anchor_name)
             .replace("{title}", title)
             .replace("{time}", now_text)
-            .replace("{platform}", self._sanitize_name(job.platform))
+            .replace(
+                "{platform}",
+                self._sanitize_name(
+                    str(getattr(stream_info, "platform", "") or job.platform or "直播")
+                ),
+            )
         )
         base_name = "_".join(part for part in base_name.split("_") if part)
         return base_name or f"{anchor_name}_{now_text}"
