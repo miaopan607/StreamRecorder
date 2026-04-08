@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 from pathlib import Path
+import sys
 
 from .app import StreamRecorderWorkerApp
 
@@ -20,7 +21,16 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
+def configure_stdio() -> None:
+    for stream in (sys.stdin, sys.stdout):
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(encoding="utf-8")
+    if hasattr(sys.stderr, "reconfigure"):
+        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+
+
 async def main() -> None:
+    configure_stdio()
     args = parse_args()
     if not args.stdio:
         raise SystemExit("Only --stdio mode is currently implemented.")

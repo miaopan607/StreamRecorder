@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.IO;
+using System.Text;
 using System.Text.Json;
 
 namespace StreamRecorder.Desktop.Services;
@@ -37,6 +38,9 @@ public sealed class WorkerClient : IAsyncDisposable
             RedirectStandardInput = true,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
+            StandardInputEncoding = Encoding.UTF8,
+            StandardOutputEncoding = Encoding.UTF8,
+            StandardErrorEncoding = Encoding.UTF8,
             CreateNoWindow = true,
             UseShellExecute = false,
         };
@@ -47,6 +51,8 @@ public sealed class WorkerClient : IAsyncDisposable
         startInfo.Environment["PYTHONPATH"] = string.IsNullOrWhiteSpace(existingPythonPath)
             ? ProjectPaths.WorkerRoot
             : ProjectPaths.WorkerRoot + Path.PathSeparator + existingPythonPath;
+        startInfo.Environment["PYTHONUTF8"] = "1";
+        startInfo.Environment["PYTHONIOENCODING"] = "utf-8";
 
         _process = new Process { StartInfo = startInfo, EnableRaisingEvents = true };
         _process.Exited += (_, _) => LogReceived?.Invoke("核心服务进程已退出");
