@@ -11,6 +11,7 @@ __pycache__/
 # Local runtime data
 runtime/
 worker/runtime-test/
+artifacts/
 
 # User / IDE
 .vs/

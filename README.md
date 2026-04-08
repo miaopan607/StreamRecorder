@@ -1,78 +1,79 @@
-# StreamCapRe2
+# StreamRecorder
 
-`StreamCapRe2` is a fresh Windows-first rewrite of the old StreamCap desktop app.
+`StreamRecorder` 是一个面向 Windows 的直播录制工具。
 
-The new direction is:
+当前方案：
 
-- `WPF` for the native Windows shell
-- a separate `Python` worker for persistent job state and recording logic
-- a clean IPC boundary so the recording engine is no longer coupled to the UI toolkit
+- `WPF` 负责原生桌面界面
+- `Python worker` 负责任务、配置、探测和录制逻辑
+- 桌面端与核心服务通过 `stdio + JSON lines` 通信
 
-## Current status
+## 当前状态
 
-This first bootstrap commit delivers the foundation:
+已完成的基础能力：
 
-- git repo initialized
-- classic `.sln` solution created for better Visual Studio compatibility
-- WPF desktop shell with `Jobs`, `Settings`, and `Diagnostics` pages
-- Python worker with JSON-lines IPC over stdio
-- persisted `jobs.json` and `core_settings.json`
-- job add/edit/delete and monitor toggle flow wired end to end
-- platform recognition scaffold migrated into the worker
+- 中文桌面界面
+- 任务新增、编辑、删除、批量操作
+- 任务列表 / 卡片布局切换与持久化
+- 监控、开播检测、自动拉起 `ffmpeg` 录制
+- 录制时长、速度、状态显示
+- 设置、Cookies、账号管理
+- 托盘、通知、日志、依赖检查
 
-The real stream detection and recording engine is the next layer to plug into the worker contract.
-
-## Project layout
+## 目录结构
 
 ```text
-src/StreamCap.Desktop/
-  WPF shell, screens, and worker client
-
-worker/streamcap_worker/
-  headless worker, job model, settings store, protocol
+src/                     WPF 桌面端
+worker/                  Python 核心服务
+runtime/                 运行时数据
 ```
 
-## Run the desktop shell
+## 开发运行
+
+要求：
+
+- Windows
+- .NET 8 SDK
+- Python 3
+- `ffmpeg`
+
+启动桌面端：
 
 ```powershell
-dotnet build .\StreamCapRe2.sln
-dotnet run --project .\src\StreamCap.Desktop\StreamCap.Desktop.csproj
+dotnet run --project .\src\StreamRecorder.Desktop\StreamRecorder.csproj
 ```
 
-The desktop app starts the Python worker automatically with:
+程序会自动启动：
 
-- `python -m streamcap_worker --stdio`
+```powershell
+python -m streamrecorder_worker --stdio --data-root .\runtime
+```
 
-using `worker/` as `PYTHONPATH` and `runtime/` as the data directory.
+## 构建 Release
 
-## Worker protocol
+先发布桌面程序：
 
-The current protocol uses newline-delimited JSON envelopes:
+```powershell
+dotnet publish .\src\StreamRecorder.Desktop\StreamRecorder.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=false -o .\artifacts\publish\win-x64
+```
 
-- `cmd`: request from WPF to the worker
-- `result`: successful response
-- `error`: failed response
-- `event`: unsolicited worker event such as `core_health` or `snapshot_changed`
+然后把以下内容放到发布目录同级：
 
-Implemented methods:
+- `worker\`
+- `runtime\`（可为空目录）
 
-- `initialize`
-- `get_snapshot`
-- `health.ping`
-- `settings.get`
-- `settings.update`
-- `jobs.upsert`
-- `jobs.delete`
-- `jobs.start_monitoring`
-- `jobs.stop_monitoring`
-- `core.shutdown`
+最终建议目录：
 
-## Next steps
+```text
+artifacts/publish/win-x64/
+  StreamRecorder.exe
+  worker/
+    streamrecorder_worker/
+  runtime/
+```
 
-Planned next work items:
+注意：当前版本默认通过 `python` 启动核心服务，因此目标机器仍需要可用的 Python 环境。
 
-1. Move the actual recording scheduler into the worker.
-2. Port the reusable `streamget + ffmpeg` pipeline behind the new worker contract.
-3. Add config import from `StreamCap-1.0.2`.
-4. Add tray, notifications, and engine diagnostics on top of the stable core.
-*** Delete File: D:\File\CODE\Git\StreamCapRe2\StreamCapRe2.slnx
+## 许可证
+
+本项目使用 `Apache-2.0`。
