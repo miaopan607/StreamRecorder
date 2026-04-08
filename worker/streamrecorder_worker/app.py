@@ -907,7 +907,7 @@ class StreamRecorderWorkerApp:
                 raw_line = await asyncio.to_thread(sys.stdin.readline)
                 if raw_line == "":
                     break
-                line = raw_line.strip()
+                line = raw_line.lstrip("\ufeff").strip()
                 if not line:
                     continue
                 try:
