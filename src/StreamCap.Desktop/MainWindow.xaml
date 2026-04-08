@@ -1,0 +1,765 @@
+<Window x:Class="StreamCap.Desktop.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d"
+        Title="StreamRecorder"
+        WindowStartupLocation="CenterScreen"
+        Width="1560"
+        Height="960"
+        MinWidth="1320"
+        MinHeight="820"
+        Icon="Assets/StreamRecorder.ico"
+        Background="#F3EFE6">
+    <Window.Resources>
+        <Style TargetType="Button">
+            <Setter Property="Margin" Value="0,0,10,0" />
+            <Setter Property="Padding" Value="14,7" />
+            <Setter Property="Background" Value="#E1E1E1" />
+            <Setter Property="Foreground" Value="#111111" />
+            <Setter Property="BorderBrush" Value="#ADADAD" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="OuterBorder"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                SnapsToDevicePixels="True">
+                            <Border x:Name="InnerBorder"
+                                    Margin="1"
+                                    BorderBrush="Transparent"
+                                    BorderThickness="1">
+                                <ContentPresenter HorizontalAlignment="Center"
+                                                  VerticalAlignment="Center"
+                                                  Margin="{TemplateBinding Padding}"
+                                                  RecognizesAccessKey="True" />
+                            </Border>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="OuterBorder" Property="Background" Value="#E5F1FB" />
+                                <Setter TargetName="OuterBorder" Property="BorderBrush" Value="#0078D7" />
+                                <Setter TargetName="InnerBorder" Property="BorderBrush" Value="Transparent" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="OuterBorder" Property="Background" Value="#CCE4F7" />
+                                <Setter TargetName="OuterBorder" Property="BorderBrush" Value="#005499" />
+                                <Setter TargetName="InnerBorder" Property="BorderBrush" Value="#7EB6E2" />
+                            </Trigger>
+                            <Trigger Property="IsFocused" Value="True">
+                                <Setter TargetName="OuterBorder" Property="Background" Value="#E1E1E1" />
+                                <Setter TargetName="OuterBorder" Property="BorderBrush" Value="#0078D7" />
+                                <Setter TargetName="InnerBorder" Property="BorderBrush" Value="#85BDE6" />
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Foreground" Value="#7A7A7A" />
+                                <Setter TargetName="OuterBorder" Property="Background" Value="#E1E1E1" />
+                                <Setter TargetName="OuterBorder" Property="BorderBrush" Value="#D0D0D0" />
+                                <Setter TargetName="InnerBorder" Property="BorderBrush" Value="Transparent" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style x:Key="RowActionButtonStyle" TargetType="Button">
+            <Setter Property="Margin" Value="0,0,6,6" />
+            <Setter Property="Padding" Value="4" />
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="Background" Value="#E1E1E1" />
+            <Setter Property="BorderBrush" Value="#ADADAD" />
+            <Setter Property="Foreground" Value="#111111" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Width" Value="28" />
+            <Setter Property="Height" Value="24" />
+        </Style>
+        <Style TargetType="TextBox">
+            <Setter Property="Margin" Value="0,6,0,0" />
+            <Setter Property="Padding" Value="8,6" />
+        </Style>
+        <Style TargetType="CheckBox">
+            <Setter Property="Margin" Value="0,6,12,0" />
+        </Style>
+        <Style TargetType="ComboBox">
+            <Setter Property="Margin" Value="0,6,0,0" />
+            <Setter Property="Padding" Value="8,4" />
+        </Style>
+        <Style TargetType="DataGrid">
+            <Setter Property="AlternatingRowBackground" Value="#FAF6EF" />
+            <Setter Property="BorderBrush" Value="#E0D1BC" />
+            <Setter Property="GridLinesVisibility" Value="Horizontal" />
+            <Setter Property="RowHeaderWidth" Value="0" />
+        </Style>
+        <Style TargetType="DataGridCell">
+            <Setter Property="Padding" Value="8,4" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+            <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+            <Style.Triggers>
+                <Trigger Property="IsSelected" Value="True">
+                    <Setter Property="Background" Value="Transparent" />
+                    <Setter Property="BorderBrush" Value="Transparent" />
+                    <Setter Property="Foreground" Value="#111111" />
+                </Trigger>
+                <Trigger Property="IsKeyboardFocusWithin" Value="True">
+                    <Setter Property="Background" Value="Transparent" />
+                    <Setter Property="BorderBrush" Value="Transparent" />
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+        <Style x:Key="TaskTextStyle" TargetType="TextBlock">
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+    </Window.Resources>
+
+    <Grid Margin="24">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <StackPanel>
+                <TextBlock Text="StreamRecorder"
+                           FontSize="34"
+                           FontWeight="Bold"
+                           Foreground="#1D4654" />
+            </StackPanel>
+
+            <Border Grid.Column="1"
+                    Padding="18,10"
+                    CornerRadius="0"
+                    Background="#FFF8EE"
+                    BorderBrush="#E0D1BC"
+                    BorderThickness="1">
+                <StackPanel>
+                    <TextBlock Text="{Binding ConnectionStateText}" FontWeight="SemiBold" Foreground="#244B5A" />
+                    <TextBlock Margin="0,4,0,0" Text="{Binding WorkerVersionText}" Foreground="#526165" FontSize="12" />
+                </StackPanel>
+            </Border>
+        </Grid>
+
+        <TabControl Grid.Row="2" Background="#FFFCF7" BorderBrush="#E0D1BC">
+            <TabItem Header="任务">
+                <Grid Margin="18">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+
+                    <Grid Margin="0,0,0,16">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+
+                        <WrapPanel>
+                            <Button Click="AddJobButton_Click">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE710;" Margin="0,0,8,0" VerticalAlignment="Center" />
+                                    <TextBlock Text="添加任务" VerticalAlignment="Center" />
+                                </StackPanel>
+                            </Button>
+                        </WrapPanel>
+
+                        <WrapPanel Grid.Column="1" HorizontalAlignment="Right">
+                            <TextBlock Margin="0,8,14,0" VerticalAlignment="Center" Foreground="#526165" Text="批量操作" />
+                            <Button x:Name="ToggleSelectAllButton" Click="ToggleSelectAllJobsButton_Click">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock x:Name="ToggleSelectAllIconTextBlock" FontFamily="Segoe MDL2 Assets" Text="&#xE73E;" Margin="0,0,8,0" VerticalAlignment="Center" />
+                                    <TextBlock x:Name="ToggleSelectAllTextBlock" Text="全选" VerticalAlignment="Center" />
+                                </StackPanel>
+                            </Button>
+                            <Button Click="DeleteJobButton_Click">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE74D;" Margin="0,0,8,0" VerticalAlignment="Center" />
+                                    <TextBlock Text="删除" VerticalAlignment="Center" />
+                                </StackPanel>
+                            </Button>
+                            <Button Click="StartMonitoringButton_Click">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE768;" Margin="0,0,8,0" VerticalAlignment="Center" />
+                                    <TextBlock Text="开始监控" VerticalAlignment="Center" />
+                                </StackPanel>
+                            </Button>
+                            <Button Click="StopMonitoringButton_Click">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE71A;" Margin="0,0,8,0" VerticalAlignment="Center" />
+                                    <TextBlock Text="停止监控" VerticalAlignment="Center" />
+                                </StackPanel>
+                            </Button>
+                            <Button Click="RecheckJobButton_Click">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE72C;" Margin="0,0,8,0" VerticalAlignment="Center" />
+                                    <TextBlock Text="立即重检" VerticalAlignment="Center" />
+                                </StackPanel>
+                            </Button>
+                        </WrapPanel>
+                    </Grid>
+
+                    <Grid Grid.Row="1">
+                        <DataGrid x:Name="JobGrid"
+                                  AutoGenerateColumns="False"
+                                  CanUserAddRows="False"
+                                  CanUserDeleteRows="False"
+                                  IsReadOnly="False"
+                                  HeadersVisibility="Column"
+                                  SelectionMode="Single"
+                                  SelectionUnit="FullRow"
+                                  ItemsSource="{Binding Jobs}"
+                                  SelectedItem="{Binding SelectedJob, Mode=TwoWay}"
+                                  PreviewMouseLeftButtonDown="JobGrid_PreviewMouseLeftButtonDown"
+                                  PreviewMouseRightButtonUp="JobGrid_PreviewMouseRightButtonUp"
+                                  MouseDoubleClick="JobGrid_MouseDoubleClick">
+                            <DataGrid.Resources>
+                                <SolidColorBrush x:Key="{x:Static SystemColors.HighlightBrushKey}" Color="#CCE4F7" />
+                                <SolidColorBrush x:Key="{x:Static SystemColors.InactiveSelectionHighlightBrushKey}" Color="#CCE4F7" />
+                                <SolidColorBrush x:Key="{x:Static SystemColors.HighlightTextBrushKey}" Color="#111111" />
+                                <Style TargetType="DataGridRow">
+                                    <Setter Property="Background" Value="Transparent" />
+                                    <Setter Property="Foreground" Value="#111111" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsBatchSelected}" Value="True">
+                                            <Setter Property="Background" Value="#CCE4F7" />
+                                            <Setter Property="Foreground" Value="#111111" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </DataGrid.Resources>
+                            <DataGrid.Columns>
+                                <DataGridTextColumn x:Name="TitleColumn" Binding="{Binding DisplayTitle}" Header="标题" Width="220" IsReadOnly="True" ElementStyle="{StaticResource TaskTextStyle}" />
+                                <DataGridTextColumn x:Name="PlatformColumn" Binding="{Binding Platform}" Header="平台" Width="120" IsReadOnly="True" ElementStyle="{StaticResource TaskTextStyle}" />
+                                <DataGridTextColumn x:Name="UrlColumn" Binding="{Binding Url}" Header="直播间链接" Width="250" IsReadOnly="True" ElementStyle="{StaticResource TaskTextStyle}" />
+                                <DataGridTextColumn x:Name="StatusColumn" Binding="{Binding StatusInfo}" Header="状态" Width="90" IsReadOnly="True" ElementStyle="{StaticResource TaskTextStyle}" />
+                                <DataGridTextColumn x:Name="QualityColumn" Binding="{Binding DisplayQuality}" Header="画质" Width="70" IsReadOnly="True" ElementStyle="{StaticResource TaskTextStyle}" />
+                                <DataGridTextColumn x:Name="FormatColumn" Binding="{Binding RecordFormat}" Header="格式" Width="70" IsReadOnly="True" ElementStyle="{StaticResource TaskTextStyle}" />
+                                <DataGridTextColumn x:Name="UpdatedAtColumn" Binding="{Binding UpdatedAt}" Header="更新时间" Width="145" IsReadOnly="True" ElementStyle="{StaticResource TaskTextStyle}" />
+                                <DataGridTemplateColumn x:Name="ActionsColumn" Header="操作" Width="330" IsReadOnly="True">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <WrapPanel Margin="0,4,0,0">
+                                                <Button Style="{StaticResource RowActionButtonStyle}" Click="RowEditJobButton_Click" Tag="{Binding}" ToolTip="编辑">
+                                                    <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE70F;" />
+                                                </Button>
+                                                <Button Style="{StaticResource RowActionButtonStyle}" Click="RowRecheckJobButton_Click" Tag="{Binding}" ToolTip="重检">
+                                                    <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE72C;" />
+                                                </Button>
+                                                <Button Style="{StaticResource RowActionButtonStyle}" Click="RowStartJobButton_Click" Tag="{Binding}" ToolTip="开始监控">
+                                                    <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE768;" />
+                                                </Button>
+                                                <Button Style="{StaticResource RowActionButtonStyle}" Click="RowStopJobButton_Click" Tag="{Binding}" ToolTip="停止监控">
+                                                    <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE71A;" />
+                                                </Button>
+                                                <Button Style="{StaticResource RowActionButtonStyle}" Click="RowOpenFolderButton_Click" Tag="{Binding}" ToolTip="打开保存目录">
+                                                    <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE838;" />
+                                                </Button>
+                                                <Button Style="{StaticResource RowActionButtonStyle}" Click="RowOpenFileButton_Click" Tag="{Binding}" ToolTip="播放最新文件">
+                                                    <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE768;" />
+                                                </Button>
+                                            </WrapPanel>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                            </DataGrid.Columns>
+                        </DataGrid>
+
+                    </Grid>
+
+                    <Grid x:Name="EditorOverlay"
+                          Grid.RowSpan="2"
+                          Visibility="Collapsed"
+                          Background="#880E1117">
+                        <Border Width="760"
+                                MaxHeight="760"
+                                Padding="20"
+                                Background="#F7F2E8"
+                                BorderBrush="#E0D1BC"
+                                BorderThickness="1"
+                                CornerRadius="0"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="*" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+
+                                <StackPanel>
+                                    <TextBlock x:Name="EditorTitleTextBlock" Text="新建任务" FontSize="24" FontWeight="Bold" Foreground="#1D4654" />
+                                    <TextBlock Margin="0,6,0,0" Text="当前处于编辑模式。请点击取消或确定保存后再继续操作其他内容。按 Esc 也可取消。" Foreground="#526165" TextWrapping="Wrap" />
+                                </StackPanel>
+
+                                <TabControl x:Name="EditorTabs" Grid.Row="1" Margin="0,18,0,18">
+                                        <TabItem Header="单条编辑">
+                                            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                                <Grid Margin="4,8,4,0">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="130" />
+                                                        <ColumnDefinition Width="*" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <Grid.RowDefinitions>
+                                                        <RowDefinition Height="Auto" />
+                                                        <RowDefinition Height="Auto" />
+                                                        <RowDefinition Height="Auto" />
+                                                        <RowDefinition Height="Auto" />
+                                                        <RowDefinition Height="Auto" />
+                                                        <RowDefinition Height="Auto" />
+                                                        <RowDefinition Height="Auto" />
+                                                        <RowDefinition Height="Auto" />
+                                                        <RowDefinition Height="Auto" />
+                                                    </Grid.RowDefinitions>
+
+                                                    <TextBlock Grid.Row="0" Margin="0,10,12,0" VerticalAlignment="Center" Text="直播间链接" />
+                                                    <TextBox x:Name="UrlTextBox" Grid.Row="0" Grid.Column="1" />
+
+                                                    <TextBlock Grid.Row="1" Margin="0,10,12,0" VerticalAlignment="Center" Text="主播名称" />
+                                                    <TextBox x:Name="StreamerNameTextBox" Grid.Row="1" Grid.Column="1" />
+
+                                                    <TextBlock Grid.Row="2" Margin="0,10,12,0" VerticalAlignment="Center" Text="录制画质" />
+                                                    <ComboBox x:Name="QualityComboBox" Grid.Row="2" Grid.Column="1">
+                                                        <ComboBoxItem Tag="OD" Content="原画" />
+                                                        <ComboBoxItem Tag="UHD" Content="超清" />
+                                                        <ComboBoxItem Tag="HD" Content="高清" />
+                                                        <ComboBoxItem Tag="SD" Content="标清" />
+                                                        <ComboBoxItem Tag="LD" Content="流畅" />
+                                                    </ComboBox>
+
+                                                    <TextBlock Grid.Row="3" Margin="0,10,12,0" VerticalAlignment="Center" Text="录制格式" />
+                                                    <ComboBox x:Name="FormatComboBox" Grid.Row="3" Grid.Column="1">
+                                                        <ComboBoxItem Tag="TS" Content="TS" />
+                                                        <ComboBoxItem Tag="FLV" Content="FLV" />
+                                                        <ComboBoxItem Tag="MKV" Content="MKV" />
+                                                        <ComboBoxItem Tag="MOV" Content="MOV" />
+                                                        <ComboBoxItem Tag="MP4" Content="MP4" />
+                                                        <ComboBoxItem Tag="MP3" Content="MP3" />
+                                                        <ComboBoxItem Tag="M4A" Content="M4A" />
+                                                    </ComboBox>
+
+                                                    <TextBlock Grid.Row="4" Margin="0,10,12,0" VerticalAlignment="Center" Text="保存目录" />
+                                                    <Grid Grid.Row="4" Grid.Column="1">
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="*" />
+                                                            <ColumnDefinition Width="Auto" />
+                                                        </Grid.ColumnDefinitions>
+                                                        <TextBox x:Name="RecordingDirTextBox" Margin="0,6,10,0" />
+                                                        <Button Grid.Column="1" Margin="0,6,0,0" Padding="12,6" Click="BrowseRecordingDirButton_Click" Content="选择目录..." />
+                                                    </Grid>
+
+                                                    <TextBlock Grid.Row="5" Margin="0,10,12,0" VerticalAlignment="Center" Text="分段时长（秒）" />
+                                                    <TextBox x:Name="SegmentTimeTextBox" Grid.Row="5" Grid.Column="1" />
+
+                                                    <TextBlock Grid.Row="6" Margin="0,10,12,0" VerticalAlignment="Center" Text="定时开始" />
+                                                    <TextBox x:Name="ScheduledStartTextBox" Grid.Row="6" Grid.Column="1" />
+
+                                                    <TextBlock Grid.Row="7" Margin="0,10,12,0" VerticalAlignment="Center" Text="监控小时数" />
+                                                    <TextBox x:Name="MonitorHoursTextBox" Grid.Row="7" Grid.Column="1" />
+
+                                                    <TextBlock Grid.Row="8" Margin="0,10,12,0" VerticalAlignment="Top" Text="开关项" />
+                                                    <WrapPanel Grid.Row="8" Grid.Column="1" Margin="0,8,0,0">
+                                                        <CheckBox x:Name="MonitorCheckBox" Content="立即开始监控" IsChecked="True" />
+                                                        <CheckBox x:Name="SegmentCheckBox" Content="启用分段录制" />
+                                                        <CheckBox x:Name="ScheduledCheckBox" Content="启用定时录制" />
+                                                        <CheckBox x:Name="MessagePushCheckBox" Content="启用消息推送" IsChecked="True" />
+                                                        <CheckBox x:Name="OnlyNotifyCheckBox" Content="仅通知不录制" />
+                                                        <CheckBox x:Name="DirectDownloadCheckBox" Content="使用 FLV 直连下载" />
+                                                    </WrapPanel>
+                                                </Grid>
+                                            </ScrollViewer>
+                                        </TabItem>
+
+                                        <TabItem Header="批量导入">
+                                            <Grid Margin="4,8,4,0">
+                                                <Grid.RowDefinitions>
+                                                    <RowDefinition Height="Auto" />
+                                                    <RowDefinition Height="*" />
+                                                </Grid.RowDefinitions>
+                                                <TextBlock Text="每行一条，支持：画质编号,链接,主播名。&#10;示例：&#10;0,https://live.douyin.com/123456,主播1&#10;2,https://www.twitch.tv/demo,主播2&#10;https://live.bilibili.com/320" TextWrapping="Wrap" Foreground="#526165" />
+                                                <TextBox x:Name="BatchTextBox"
+                                                         Grid.Row="1"
+                                                         Margin="0,14,0,0"
+                                                         AcceptsReturn="True"
+                                                         VerticalScrollBarVisibility="Auto"
+                                                         TextWrapping="Wrap"
+                                                         FontFamily="Consolas"
+                                                         MinHeight="420" />
+                                            </Grid>
+                                        </TabItem>
+                                    </TabControl>
+
+                                <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right">
+                                    <Button Click="ClearEditorButton_Click" Content="取消" />
+                                    <Button Click="SaveEditorButton_Click" Content="确定保存" />
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+                    </Grid>
+
+                    <Grid x:Name="ColumnOverlay"
+                          Grid.RowSpan="2"
+                          Visibility="Collapsed"
+                          Background="#660E1117">
+                        <Border Width="420"
+                                Padding="20"
+                                Background="#F7F2E8"
+                                BorderBrush="#C8C8C8"
+                                BorderThickness="1"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="*" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+
+                                <StackPanel>
+                                    <TextBlock Text="选择列" FontSize="22" FontWeight="Bold" Foreground="#1D4654" />
+                                    <TextBlock Margin="0,6,0,0" Text="勾选需要在任务列表中显示的列。" Foreground="#526165" />
+                                </StackPanel>
+
+                                <StackPanel Grid.Row="1" Margin="0,18,0,18">
+                                    <CheckBox x:Name="ColumnTitleCheckBox" Content="标题" />
+                                    <CheckBox x:Name="ColumnPlatformCheckBox" Content="平台" />
+                                    <CheckBox x:Name="ColumnUrlCheckBox" Content="直播间链接" />
+                                    <CheckBox x:Name="ColumnStatusCheckBox" Content="状态" />
+                                    <CheckBox x:Name="ColumnQualityCheckBox" Content="画质" />
+                                    <CheckBox x:Name="ColumnFormatCheckBox" Content="格式" />
+                                    <CheckBox x:Name="ColumnUpdatedCheckBox" Content="更新时间" />
+                                    <CheckBox x:Name="ColumnActionsCheckBox" Content="操作" />
+                                </StackPanel>
+
+                                <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right">
+                                    <Button Click="CancelColumnOverlayButton_Click" Content="取消" />
+                                    <Button Click="ApplyColumnOverlayButton_Click" Content="确定" />
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+                    </Grid>
+                </Grid>
+            </TabItem>
+
+            <TabItem Header="设置">
+                <Grid Margin="18">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+
+                    <TabControl>
+                        <TabItem Header="录制">
+                            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                <WrapPanel Margin="12,0,18,18" ItemWidth="520">
+                                    <GroupBox Header="存储与命名" Margin="0,0,18,18" Padding="14" Width="520">
+                                        <StackPanel>
+                                            <TextBlock Text="默认保存路径" />
+                                            <TextBox Text="{Binding Settings.LiveSavePath, UpdateSourceTrigger=PropertyChanged}" />
+                                            <TextBlock Margin="0,12,0,0" Text="文件名模板" />
+                                            <TextBox Text="{Binding Settings.CustomFilenameTemplate, UpdateSourceTrigger=PropertyChanged}" />
+                                            <WrapPanel Margin="0,8,0,0">
+                                                <CheckBox Content="文件名包含标题" IsChecked="{Binding Settings.FilenameIncludesTitle}" />
+                                                <CheckBox Content="移除表情" IsChecked="{Binding Settings.RemoveEmojis}" />
+                                                <CheckBox Content="目录含平台" IsChecked="{Binding Settings.FolderNamePlatform}" />
+                                                <CheckBox Content="目录含主播" IsChecked="{Binding Settings.FolderNameAuthor}" />
+                                                <CheckBox Content="目录含日期" IsChecked="{Binding Settings.FolderNameTime}" />
+                                                <CheckBox Content="目录含标题" IsChecked="{Binding Settings.FolderNameTitle}" />
+                                            </WrapPanel>
+                                        </StackPanel>
+                                    </GroupBox>
+
+                                    <GroupBox Header="网络与探测" Margin="0,0,18,18" Padding="14" Width="520">
+                                        <StackPanel>
+                                            <CheckBox Content="启用代理" IsChecked="{Binding Settings.EnableProxy}" />
+                                            <TextBlock Margin="0,12,0,0" Text="代理地址" />
+                                            <TextBox Text="{Binding Settings.ProxyAddress, UpdateSourceTrigger=PropertyChanged}" />
+                                            <TextBlock Margin="0,12,0,0" Text="轮询间隔（秒）" />
+                                            <TextBox Text="{Binding Settings.LoopTimeSeconds, UpdateSourceTrigger=PropertyChanged}" />
+                                            <TextBlock Margin="0,12,0,0" Text="默认代理平台（逗号分隔）" />
+                                            <TextBox Text="{Binding Settings.DefaultPlatformWithProxy, UpdateSourceTrigger=PropertyChanged}" />
+                                            <TextBlock Margin="0,12,0,0" Text="平台并发数" />
+                                            <TextBox Text="{Binding Settings.PlatformMaxConcurrentRequests, UpdateSourceTrigger=PropertyChanged}" />
+                                        </StackPanel>
+                                    </GroupBox>
+
+                                    <GroupBox Header="录制引擎" Margin="0,0,18,18" Padding="14" Width="520">
+                                        <StackPanel>
+                                            <TextBlock Text="默认录制格式" />
+                                            <ComboBox SelectedValuePath="Content" SelectedValue="{Binding Settings.VideoFormat}">
+                                                <ComboBoxItem Content="TS" />
+                                                <ComboBoxItem Content="FLV" />
+                                                <ComboBoxItem Content="MKV" />
+                                                <ComboBoxItem Content="MOV" />
+                                                <ComboBoxItem Content="MP4" />
+                                                <ComboBoxItem Content="MP3" />
+                                                <ComboBoxItem Content="M4A" />
+                                            </ComboBox>
+                                            <TextBlock Margin="0,12,0,0" Text="默认画质" />
+                                            <ComboBox SelectedValuePath="Tag" SelectedValue="{Binding Settings.RecordQuality}">
+                                                <ComboBoxItem Tag="OD" Content="原画" />
+                                                <ComboBoxItem Tag="UHD" Content="超清" />
+                                                <ComboBoxItem Tag="HD" Content="高清" />
+                                                <ComboBoxItem Tag="SD" Content="标清" />
+                                                <ComboBoxItem Tag="LD" Content="流畅" />
+                                            </ComboBox>
+                                            <WrapPanel Margin="0,8,0,0">
+                                                <CheckBox Content="启用分段录制" IsChecked="{Binding Settings.SegmentedRecordingEnabled}" />
+                                                <CheckBox Content="强制 HTTPS" IsChecked="{Binding Settings.ForceHttpsRecording}" />
+                                                <CheckBox Content="允许 FLV 直连下载" IsChecked="{Binding Settings.FlvUseDirectDownload}" />
+                                                <CheckBox Content="生成时间字幕文件" IsChecked="{Binding Settings.GenerateTimeSubtitleFile}" />
+                                                <CheckBox Content="录后 TS 转 MP4" IsChecked="{Binding Settings.ConvertToMp4}" />
+                                                <CheckBox Content="转码后删除原文件" IsChecked="{Binding Settings.DeleteOriginal}" />
+                                            </WrapPanel>
+                                            <TextBlock Margin="0,12,0,0" Text="分段时长（秒）" />
+                                            <TextBox Text="{Binding Settings.VideoSegmentTime, UpdateSourceTrigger=PropertyChanged}" />
+                                            <TextBlock Margin="0,12,0,0" Text="默认直播源" />
+                                            <ComboBox SelectedValuePath="Content" SelectedValue="{Binding Settings.DefaultLiveSource}">
+                                                <ComboBoxItem Content="FLV" />
+                                                <ComboBoxItem Content="HLS" />
+                                            </ComboBox>
+                                            <TextBlock Margin="0,12,0,0" Text="最低剩余磁盘空间（GB，低于后不启动新录制）" />
+                                            <TextBox Text="{Binding Settings.RecordingSpaceThreshold, UpdateSourceTrigger=PropertyChanged}" />
+                                            <CheckBox Content="执行自定义脚本" IsChecked="{Binding Settings.ExecuteCustomScript}" />
+                                            <TextBlock Margin="0,12,0,0" Text="自定义脚本命令" />
+                                            <TextBox Text="{Binding Settings.CustomScriptCommand, UpdateSourceTrigger=PropertyChanged}" />
+                                        </StackPanel>
+                                    </GroupBox>
+
+                                    <GroupBox Header="窗口行为" Margin="0,0,18,18" Padding="14" Width="520">
+                                        <StackPanel>
+                                            <CheckBox Content="点击最小化时缩到托盘" IsChecked="{Binding Settings.MinimizeToTrayOnMinimize}" />
+                                            <CheckBox Content="点击关闭时缩到托盘" IsChecked="{Binding Settings.MinimizeToTrayOnClose}" />
+                                        </StackPanel>
+                                    </GroupBox>
+                                </WrapPanel>
+                            </ScrollViewer>
+                        </TabItem>
+
+                        <TabItem Header="推送">
+                            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                <WrapPanel Margin="12,0,18,18" ItemWidth="520">
+                                    <GroupBox Header="系统通知" Margin="0,0,18,18" Padding="14" Width="520">
+                                        <StackPanel>
+                                            <WrapPanel Margin="0,8,0,0">
+                                                <CheckBox Content="启用系统状态栏通知" IsChecked="{Binding Settings.SystemNotificationEnabled}" />
+                                                <CheckBox Content="开播通知" IsChecked="{Binding Settings.StreamStartNotificationEnabled}" />
+                                                <CheckBox Content="下播通知" IsChecked="{Binding Settings.StreamEndNotificationEnabled}" />
+                                                <CheckBox Content="仅通知不录制" IsChecked="{Binding Settings.OnlyNotifyNoRecord}" />
+                                            </WrapPanel>
+                                            <TextBlock Margin="0,12,0,0" Text="自定义通知标题" />
+                                            <TextBox Text="{Binding Settings.CustomNotificationTitle, UpdateSourceTrigger=PropertyChanged}" />
+                                            <TextBlock Margin="0,12,0,0" Text="开播通知内容" />
+                                            <TextBox Text="{Binding Settings.CustomStreamStartContent, UpdateSourceTrigger=PropertyChanged}" />
+                                            <TextBlock Margin="0,12,0,0" Text="下播通知内容" />
+                                            <TextBox Text="{Binding Settings.CustomStreamEndContent, UpdateSourceTrigger=PropertyChanged}" />
+                                        </StackPanel>
+                                    </GroupBox>
+
+                                    <GroupBox Header="推送通道" Margin="0,0,18,18" Padding="14" Width="520">
+                                        <StackPanel>
+                                            <WrapPanel Margin="0,8,0,0">
+                                                <CheckBox Content="钉钉" IsChecked="{Binding Settings.DingtalkEnabled}" />
+                                                <CheckBox Content="企业微信" IsChecked="{Binding Settings.WechatEnabled}" />
+                                                <CheckBox Content="Bark" IsChecked="{Binding Settings.BarkEnabled}" />
+                                                <CheckBox Content="Ntfy" IsChecked="{Binding Settings.NtfyEnabled}" />
+                                                <CheckBox Content="Telegram" IsChecked="{Binding Settings.TelegramEnabled}" />
+                                                <CheckBox Content="邮件" IsChecked="{Binding Settings.EmailEnabled}" />
+                                                <CheckBox Content="ServerChan" IsChecked="{Binding Settings.ServerchanEnabled}" />
+                                            </WrapPanel>
+                                            <TextBlock Margin="0,12,0,0" Text="钉钉 Webhook" />
+                                            <TextBox Text="{Binding Settings.DingtalkWebhookUrl, UpdateSourceTrigger=PropertyChanged}" />
+                                            <TextBlock Margin="0,12,0,0" Text="钉钉 @对象" />
+                                            <TextBox Text="{Binding Settings.DingtalkAtObjects, UpdateSourceTrigger=PropertyChanged}" />
+                                            <CheckBox Content="钉钉 @所有人" IsChecked="{Binding Settings.DingtalkAtAll}" />
+                                            <TextBlock Margin="0,12,0,0" Text="企业微信 Webhook" />
+                                            <TextBox Text="{Binding Settings.WechatWebhookUrl, UpdateSourceTrigger=PropertyChanged}" />
+                                            <TextBlock Margin="0,12,0,0" Text="Bark 地址" />
+                                            <TextBox Text="{Binding Settings.BarkWebhookUrl, UpdateSourceTrigger=PropertyChanged}" />
+                                            <TextBlock Margin="0,12,0,0" Text="Bark 中断级别" />
+                                            <TextBox Text="{Binding Settings.BarkInterruptLevel, UpdateSourceTrigger=PropertyChanged}" />
+                                            <TextBlock Margin="0,12,0,0" Text="Bark 声音" />
+                                            <TextBox Text="{Binding Settings.BarkSound, UpdateSourceTrigger=PropertyChanged}" />
+                                        </StackPanel>
+                                    </GroupBox>
+
+                                    <GroupBox Header="高级通道配置" Margin="0,0,18,18" Padding="14" Width="520">
+                                        <StackPanel>
+                                            <TextBlock Margin="0,12,0,0" Text="Ntfy 地址" />
+                                            <TextBox Text="{Binding Settings.NtfyServerUrl, UpdateSourceTrigger=PropertyChanged}" />
+                                            <TextBlock Margin="0,12,0,0" Text="Ntfy 标签" />
+                                            <TextBox Text="{Binding Settings.NtfyTags, UpdateSourceTrigger=PropertyChanged}" />
+                                            <TextBlock Margin="0,12,0,0" Text="Ntfy 邮箱" />
+                                            <TextBox Text="{Binding Settings.NtfyEmail, UpdateSourceTrigger=PropertyChanged}" />
+                                            <TextBlock Margin="0,12,0,0" Text="Ntfy 动作链接" />
+                                            <TextBox Text="{Binding Settings.NtfyActionUrl, UpdateSourceTrigger=PropertyChanged}" />
+                                            <TextBlock Margin="0,12,0,0" Text="Telegram Token" />
+                                            <TextBox Text="{Binding Settings.TelegramApiToken, UpdateSourceTrigger=PropertyChanged}" />
+                                            <TextBlock Margin="0,12,0,0" Text="Telegram Chat ID" />
+                                            <TextBox Text="{Binding Settings.TelegramChatId, UpdateSourceTrigger=PropertyChanged}" />
+                                            <TextBlock Margin="0,12,0,0" Text="ServerChan SendKey" />
+                                            <TextBox Text="{Binding Settings.ServerchanSendkey, UpdateSourceTrigger=PropertyChanged}" />
+                                            <TextBlock Margin="0,12,0,0" Text="ServerChan Channel" />
+                                            <TextBox Text="{Binding Settings.ServerchanChannel, UpdateSourceTrigger=PropertyChanged}" />
+                                            <TextBlock Margin="0,12,0,0" Text="ServerChan 标签" />
+                                            <TextBox Text="{Binding Settings.ServerchanTags, UpdateSourceTrigger=PropertyChanged}" />
+                                            <TextBlock Margin="0,12,0,0" Text="SMTP 服务器" />
+                                            <TextBox Text="{Binding Settings.SmtpServer, UpdateSourceTrigger=PropertyChanged}" />
+                                            <TextBlock Margin="0,12,0,0" Text="邮箱用户名" />
+                                            <TextBox Text="{Binding Settings.EmailUsername, UpdateSourceTrigger=PropertyChanged}" />
+                                            <TextBlock Margin="0,12,0,0" Text="邮箱密码" />
+                                            <TextBox Text="{Binding Settings.EmailPassword, UpdateSourceTrigger=PropertyChanged}" />
+                                            <TextBlock Margin="0,12,0,0" Text="发件邮箱" />
+                                            <TextBox Text="{Binding Settings.SenderEmail, UpdateSourceTrigger=PropertyChanged}" />
+                                            <TextBlock Margin="0,12,0,0" Text="发件人名称" />
+                                            <TextBox Text="{Binding Settings.SenderName, UpdateSourceTrigger=PropertyChanged}" />
+                                            <TextBlock Margin="0,12,0,0" Text="收件邮箱" />
+                                            <TextBox Text="{Binding Settings.RecipientEmail, UpdateSourceTrigger=PropertyChanged}" />
+                                        </StackPanel>
+                                    </GroupBox>
+                                </WrapPanel>
+                            </ScrollViewer>
+                        </TabItem>
+
+                        <TabItem Header="Cookies">
+                            <Grid Margin="0,12,0,0">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="*" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+                                <DataGrid AutoGenerateColumns="False"
+                                          CanUserAddRows="False"
+                                          CanUserDeleteRows="False"
+                                          HeadersVisibility="Column"
+                                          ItemsSource="{Binding CookieEntries}">
+                                    <DataGrid.Columns>
+                                        <DataGridTextColumn Binding="{Binding Key}" Header="平台" Width="180" IsReadOnly="True" />
+                                        <DataGridTextColumn Binding="{Binding Value, UpdateSourceTrigger=PropertyChanged}" Header="Cookie" Width="*" />
+                                    </DataGrid.Columns>
+                                </DataGrid>
+                                <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">
+                                    <Button Click="ReloadCookiesButton_Click" Content="重新加载 Cookies" />
+                                    <Button Click="SaveCookiesButton_Click" Content="保存 Cookies" />
+                                </StackPanel>
+                            </Grid>
+                        </TabItem>
+
+                        <TabItem Header="账号">
+                            <Grid Margin="0,12,0,0">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="*" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+                                <DataGrid AutoGenerateColumns="False"
+                                          CanUserAddRows="False"
+                                          CanUserDeleteRows="False"
+                                          HeadersVisibility="Column"
+                                          ItemsSource="{Binding AccountEntries}">
+                                    <DataGrid.Columns>
+                                        <DataGridTextColumn Binding="{Binding Key}" Header="键名" Width="240" IsReadOnly="True" />
+                                        <DataGridTextColumn Binding="{Binding Value, UpdateSourceTrigger=PropertyChanged}" Header="值" Width="*" />
+                                    </DataGrid.Columns>
+                                </DataGrid>
+                                <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">
+                                    <Button Click="ReloadAccountsButton_Click" Content="重新加载账号" />
+                                    <Button Click="SaveAccountsButton_Click" Content="保存账号" />
+                                </StackPanel>
+                            </Grid>
+                        </TabItem>
+                    </TabControl>
+
+                    <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">
+                        <Button Click="SaveSettingsButton_Click" Content="保存录制/推送设置" />
+                        <Button Click="RefreshButton_Click" Content="重新加载快照" />
+                    </StackPanel>
+                </Grid>
+            </TabItem>
+
+            <TabItem Header="诊断">
+                <Grid Margin="18">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="440" />
+                        <ColumnDefinition Width="18" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+
+                    <ScrollViewer VerticalScrollBarVisibility="Auto">
+                        <StackPanel>
+                            <Border Padding="18" CornerRadius="0" Background="#F7F2E8" BorderBrush="#E0D1BC" BorderThickness="1">
+                                <StackPanel>
+                                    <TextBlock Text="路径信息" FontSize="18" FontWeight="Bold" Foreground="#1D4654" />
+                                    <TextBlock Margin="0,16,0,0" Text="仓库根目录" />
+                                    <TextBox IsReadOnly="True" Text="{Binding RepositoryRoot, Mode=OneWay}" />
+                                    <TextBlock Margin="0,10,0,0" Text="核心服务目录" />
+                                    <TextBox IsReadOnly="True" Text="{Binding WorkerRoot, Mode=OneWay}" />
+                                    <TextBlock Margin="0,10,0,0" Text="运行数据目录" />
+                                    <TextBox IsReadOnly="True" Text="{Binding WorkerDataRoot, Mode=OneWay}" />
+                                </StackPanel>
+                            </Border>
+
+                            <Border Margin="0,18,0,0" Padding="18" CornerRadius="0" Background="#F7F2E8" BorderBrush="#E0D1BC" BorderThickness="1">
+                                <StackPanel>
+                                    <TextBlock Text="旧版导入" FontSize="18" FontWeight="Bold" Foreground="#1D4654" />
+                                    <TextBlock Margin="0,10,0,0" Text="旧版项目根目录" />
+                                    <TextBox Text="{Binding LegacyImportPath, UpdateSourceTrigger=PropertyChanged}" />
+                                    <WrapPanel Margin="0,16,0,0">
+                                        <Button Click="PickLegacyFolderButton_Click" Content="选择目录" />
+                                        <Button Click="ImportLegacyButton_Click" Content="导入旧版配置" />
+                                    </WrapPanel>
+                                </StackPanel>
+                            </Border>
+
+                            <Border Margin="0,18,0,0" Padding="18" CornerRadius="0" Background="#F7F2E8" BorderBrush="#E0D1BC" BorderThickness="1">
+                                <StackPanel>
+                                    <TextBlock Text="维护操作" FontSize="18" FontWeight="Bold" Foreground="#1D4654" />
+                                    <WrapPanel Margin="0,16,0,0">
+                                        <Button Click="PingButton_Click" Content="测试核心服务" />
+                                        <Button Click="RefreshDependenciesButton_Click" Content="刷新依赖状态" />
+                                        <Button Click="CheckUpdatesButton_Click" Content="检查更新" />
+                                        <Button Click="OpenDataFolderButton_Click" Content="打开数据目录" />
+                                    </WrapPanel>
+                                </StackPanel>
+                            </Border>
+
+                            <Border Margin="0,18,0,0" Padding="18" CornerRadius="0" Background="#F7F2E8" BorderBrush="#E0D1BC" BorderThickness="1">
+                                <StackPanel>
+                                    <TextBlock Text="依赖状态" FontSize="18" FontWeight="Bold" Foreground="#1D4654" />
+                                    <DataGrid Margin="0,14,0,0"
+                                              AutoGenerateColumns="False"
+                                              CanUserAddRows="False"
+                                              CanUserDeleteRows="False"
+                                              IsReadOnly="True"
+                                              HeadersVisibility="Column"
+                                              ItemsSource="{Binding Dependencies}">
+                                        <DataGrid.Columns>
+                                            <DataGridTextColumn Binding="{Binding Name}" Header="名称" Width="90" />
+                                            <DataGridCheckBoxColumn Binding="{Binding Available}" Header="可用" Width="70" />
+                                            <DataGridTextColumn Binding="{Binding Version}" Header="版本" Width="100" />
+                                            <DataGridTextColumn Binding="{Binding Path}" Header="路径" Width="*" />
+                                        </DataGrid.Columns>
+                                    </DataGrid>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                    </ScrollViewer>
+
+                    <Border Grid.Column="2" Padding="18" CornerRadius="0" Background="#FFFDF7" BorderBrush="#E0D1BC" BorderThickness="1">
+                        <DockPanel>
+                            <TextBlock DockPanel.Dock="Top" Text="核心服务日志" FontSize="18" FontWeight="Bold" Foreground="#1D4654" />
+                            <ListBox Margin="0,14,0,0" ItemsSource="{Binding Logs}" BorderThickness="0" Background="Transparent" />
+                        </DockPanel>
+                    </Border>
+                </Grid>
+            </TabItem>
+        </TabControl>
+    </Grid>
+</Window>

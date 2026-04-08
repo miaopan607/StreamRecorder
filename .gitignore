@@ -1,0 +1,21 @@
+# .NET
+bin/
+obj/
+
+# Python
+__pycache__/
+*.pyc
+.ruff_cache/
+.pytest_cache/
+
+# Local runtime data
+runtime/
+worker/runtime-test/
+
+# User / IDE
+.vs/
+*.user
+*.suo
+
+# Solution variants
+*.slnx
