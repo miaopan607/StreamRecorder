@@ -80,6 +80,11 @@ public partial class JobEditorWindow : global::System.Windows.Window
         }
     }
 
+    private void ResetRecordingDirButton_Click(object sender, global::System.Windows.RoutedEventArgs e)
+    {
+        RecordingDirTextBox.Text = string.Empty;
+    }
+
     private RecordingJob BuildSingleJob()
     {
         var url = UrlTextBox.Text.Trim();

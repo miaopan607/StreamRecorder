@@ -510,9 +510,11 @@
                                                         <Grid.ColumnDefinitions>
                                                             <ColumnDefinition Width="*" />
                                                             <ColumnDefinition Width="Auto" />
+                                                            <ColumnDefinition Width="Auto" />
                                                         </Grid.ColumnDefinitions>
                                                         <TextBox x:Name="RecordingDirTextBox" Margin="0,6,10,0" />
-                                                        <Button Grid.Column="1" Margin="0,6,0,0" Padding="12,6" Click="BrowseRecordingDirButton_Click" Content="选择目录..." />
+                                                        <Button Grid.Column="1" Margin="0,6,10,0" Padding="12,6" Click="ResetRecordingDirButton_Click" Content="默认目录" />
+                                                        <Button Grid.Column="2" Margin="0,6,0,0" Padding="12,6" Click="BrowseRecordingDirButton_Click" Content="选择目录..." />
                                                     </Grid>
 
                                                     <TextBlock Grid.Row="5"
