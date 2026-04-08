@@ -7,58 +7,7 @@
         WindowStartupLocation="CenterOwner"
         ResizeMode="NoResize"
         ShowInTaskbar="False"
-        Background="#F6F0E3">
-    <Window.Resources>
-        <Style TargetType="Button">
-            <Setter Property="Margin" Value="0,0,10,0" />
-            <Setter Property="Padding" Value="14,7" />
-            <Setter Property="Background" Value="#E1E1E1" />
-            <Setter Property="Foreground" Value="#111111" />
-            <Setter Property="BorderBrush" Value="#ADADAD" />
-            <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="FocusVisualStyle" Value="{x:Null}" />
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border x:Name="OuterBorder"
-                                Background="{TemplateBinding Background}"
-                                BorderBrush="{TemplateBinding BorderBrush}"
-                                BorderThickness="{TemplateBinding BorderThickness}"
-                                SnapsToDevicePixels="True">
-                            <Border x:Name="InnerBorder"
-                                    Margin="1"
-                                    BorderBrush="Transparent"
-                                    BorderThickness="1">
-                                <ContentPresenter HorizontalAlignment="Center"
-                                                  VerticalAlignment="Center"
-                                                  Margin="{TemplateBinding Padding}"
-                                                  RecognizesAccessKey="True" />
-                            </Border>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="OuterBorder" Property="Background" Value="#E5F1FB" />
-                                <Setter TargetName="OuterBorder" Property="BorderBrush" Value="#0078D7" />
-                                <Setter TargetName="InnerBorder" Property="BorderBrush" Value="Transparent" />
-                            </Trigger>
-                            <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="OuterBorder" Property="Background" Value="#CCE4F7" />
-                                <Setter TargetName="OuterBorder" Property="BorderBrush" Value="#005499" />
-                                <Setter TargetName="InnerBorder" Property="BorderBrush" Value="#7EB6E2" />
-                            </Trigger>
-                            <Trigger Property="IsEnabled" Value="False">
-                                <Setter Property="Foreground" Value="#7A7A7A" />
-                                <Setter TargetName="OuterBorder" Property="Background" Value="#E1E1E1" />
-                                <Setter TargetName="OuterBorder" Property="BorderBrush" Value="#D0D0D0" />
-                                <Setter TargetName="InnerBorder" Property="BorderBrush" Value="Transparent" />
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-
-    </Window.Resources>
+        Background="{DynamicResource WindowBackgroundBrush}">
 
     <Grid Margin="18">
         <Grid.RowDefinitions>
@@ -66,8 +15,8 @@
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <Border Background="#FFFDF7"
-                BorderBrush="#E0D1BC"
+        <Border Background="{DynamicResource ElevatedSurfaceBrush}"
+                BorderBrush="{DynamicResource BorderBrush}"
                 BorderThickness="1"
                 Padding="18">
             <Grid>
@@ -81,14 +30,14 @@
                         Height="34"
                         CornerRadius="17"
                         VerticalAlignment="Top"
-                        Background="#DDEAF4">
+                        Background="{DynamicResource DialogInfoBackgroundBrush}">
                     <TextBlock x:Name="IconTextBlock"
                                HorizontalAlignment="Center"
                                VerticalAlignment="Center"
                                FontSize="18"
                                FontWeight="Bold"
                                Text="i"
-                               Foreground="#1D4654" />
+                               Foreground="{DynamicResource DialogInfoForegroundBrush}" />
                 </Border>
 
                 <ScrollViewer Grid.Column="1"
@@ -96,7 +45,7 @@
                               MaxHeight="240"
                               VerticalScrollBarVisibility="Auto">
                     <TextBlock x:Name="MessageTextBlock"
-                               Foreground="#243236"
+                               Foreground="{DynamicResource TextPrimaryBrush}"
                                FontSize="14"
                                LineHeight="22"
                                TextWrapping="Wrap" />

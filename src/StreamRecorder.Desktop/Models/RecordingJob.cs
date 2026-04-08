@@ -82,21 +82,6 @@ public sealed class RecordingJob : ObservableObject
         _ => Quality,
     };
 
-    public string StatusBackground => StatusInfo switch
-    {
-        "录制中" => "#1E8E3E",
-        "错误" => "#C62828",
-        "检测中" => "#1565C0",
-        "监控中" => "#1565C0",
-        "未开播" => "#F9A825",
-        "已停止" => "#757575",
-        _ => "#757575",
-    };
-
-    public string StatusForeground => StatusInfo == "未开播" ? "#111111" : "#FFFFFF";
-
-    public string StatusBorder => StatusBackground;
-
     public string DetailSummary => string.Join("\n", new[]
     {
         $"标题：{DisplayTitle}",

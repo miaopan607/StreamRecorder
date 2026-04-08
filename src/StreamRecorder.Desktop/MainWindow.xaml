@@ -10,137 +10,10 @@
         Height="860"
         UseLayoutRounding="True"
         Icon="Assets/StreamRecorder.ico"
-        Background="#F3EFE6">
+        Background="{DynamicResource WindowBackgroundBrush}">
     <Window.Resources>
-        <Style TargetType="Button">
-            <Setter Property="Margin" Value="0,0,10,0" />
-            <Setter Property="Padding" Value="14,7" />
-            <Setter Property="Background" Value="#E1E1E1" />
-            <Setter Property="Foreground" Value="#111111" />
-            <Setter Property="BorderBrush" Value="#ADADAD" />
-            <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="FocusVisualStyle" Value="{x:Null}" />
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border x:Name="OuterBorder"
-                                Background="{TemplateBinding Background}"
-                                BorderBrush="{TemplateBinding BorderBrush}"
-                                BorderThickness="{TemplateBinding BorderThickness}"
-                                SnapsToDevicePixels="True">
-                            <Border x:Name="InnerBorder"
-                                    Margin="1"
-                                    BorderBrush="Transparent"
-                                    BorderThickness="1">
-                                <ContentPresenter HorizontalAlignment="Center"
-                                                  VerticalAlignment="Center"
-                                                  Margin="{TemplateBinding Padding}"
-                                                  RecognizesAccessKey="True" />
-                            </Border>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="OuterBorder" Property="Background" Value="#E5F1FB" />
-                                <Setter TargetName="OuterBorder" Property="BorderBrush" Value="#0078D7" />
-                                <Setter TargetName="InnerBorder" Property="BorderBrush" Value="Transparent" />
-                            </Trigger>
-                            <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="OuterBorder" Property="Background" Value="#CCE4F7" />
-                                <Setter TargetName="OuterBorder" Property="BorderBrush" Value="#005499" />
-                                <Setter TargetName="InnerBorder" Property="BorderBrush" Value="#7EB6E2" />
-                            </Trigger>
-                            <Trigger Property="IsEnabled" Value="False">
-                                <Setter Property="Foreground" Value="#7A7A7A" />
-                                <Setter TargetName="OuterBorder" Property="Background" Value="#E1E1E1" />
-                                <Setter TargetName="OuterBorder" Property="BorderBrush" Value="#D0D0D0" />
-                                <Setter TargetName="InnerBorder" Property="BorderBrush" Value="Transparent" />
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-        <Style x:Key="RowActionButtonStyle" TargetType="Button">
-            <Setter Property="Margin" Value="0,0,6,6" />
-            <Setter Property="Padding" Value="4" />
-            <Setter Property="FontSize" Value="11" />
-            <Setter Property="Background" Value="#E1E1E1" />
-            <Setter Property="BorderBrush" Value="#ADADAD" />
-            <Setter Property="Foreground" Value="#111111" />
-            <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="Width" Value="28" />
-            <Setter Property="Height" Value="24" />
-        </Style>
-        <Style TargetType="TextBox">
-            <Setter Property="Margin" Value="0,6,0,0" />
-            <Setter Property="Padding" Value="8,6" />
-        </Style>
-        <Style TargetType="CheckBox">
-            <Setter Property="Margin" Value="0,6,12,0" />
-        </Style>
-        <Style TargetType="ComboBox">
-            <Setter Property="Margin" Value="0,6,0,0" />
-            <Setter Property="Padding" Value="8,4" />
+        <Style TargetType="ComboBox" BasedOn="{StaticResource AppComboBoxStyle}">
             <EventSetter Event="PreviewMouseWheel" Handler="ComboBox_PreviewMouseWheel" />
-        </Style>
-        <Style TargetType="DataGrid">
-            <Setter Property="AlternatingRowBackground" Value="#FAF6EF" />
-            <Setter Property="BorderBrush" Value="#E0D1BC" />
-            <Setter Property="GridLinesVisibility" Value="Horizontal" />
-            <Setter Property="RowHeaderWidth" Value="0" />
-        </Style>
-        <Style TargetType="DataGridCell">
-            <Setter Property="Padding" Value="8,4" />
-            <Setter Property="VerticalContentAlignment" Value="Center" />
-            <Setter Property="FocusVisualStyle" Value="{x:Null}" />
-            <Setter Property="Background" Value="Transparent" />
-            <Setter Property="BorderBrush" Value="Transparent" />
-            <Style.Triggers>
-                <Trigger Property="IsSelected" Value="True">
-                    <Setter Property="Background" Value="Transparent" />
-                    <Setter Property="BorderBrush" Value="Transparent" />
-                    <Setter Property="Foreground" Value="#111111" />
-                </Trigger>
-                <Trigger Property="IsKeyboardFocusWithin" Value="True">
-                    <Setter Property="Background" Value="Transparent" />
-                    <Setter Property="BorderBrush" Value="Transparent" />
-                </Trigger>
-            </Style.Triggers>
-        </Style>
-        <Style x:Key="TaskTextStyle" TargetType="TextBlock">
-            <Setter Property="VerticalAlignment" Value="Center" />
-        </Style>
-        <Style x:Key="SettingsGroupBoxStyle" TargetType="GroupBox">
-            <Setter Property="Background" Value="#FFFDF7" />
-            <Setter Property="BorderBrush" Value="#B7B7B7" />
-            <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="Padding" Value="14" />
-            <Setter Property="SnapsToDevicePixels" Value="True" />
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="GroupBox">
-                        <Grid SnapsToDevicePixels="True"
-                              ClipToBounds="False">
-                            <Border Margin="0,10,0,0"
-                                    Background="{TemplateBinding Background}"
-                                    BorderBrush="{TemplateBinding BorderBrush}"
-                                    BorderThickness="{TemplateBinding BorderThickness}"
-                                    Padding="{TemplateBinding Padding}"
-                                    SnapsToDevicePixels="True">
-                                <ContentPresenter Margin="0,4,0,0" />
-                            </Border>
-                            <Border HorizontalAlignment="Left"
-                                    VerticalAlignment="Top"
-                                    Margin="12,0,0,0"
-                                    Padding="6,0"
-                                    Background="{TemplateBinding Background}">
-                                <ContentPresenter ContentSource="Header"
-                                                  RecognizesAccessKey="True" />
-                            </Border>
-                        </Grid>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
         </Style>
     </Window.Resources>
 
@@ -161,23 +34,23 @@
                 <TextBlock Text="StreamRecorder"
                            FontSize="34"
                            FontWeight="Bold"
-                           Foreground="#1D4654" />
+                           Foreground="{DynamicResource SectionTitleBrush}" />
             </StackPanel>
 
             <Border Grid.Column="1"
                     Padding="18,10"
                     CornerRadius="0"
-                    Background="#FFF8EE"
-                    BorderBrush="#E0D1BC"
+                    Background="{DynamicResource StatusPanelBackgroundBrush}"
+                    BorderBrush="{DynamicResource BorderBrush}"
                     BorderThickness="1">
                 <StackPanel>
-                    <TextBlock Text="{Binding ConnectionStateText}" FontWeight="SemiBold" Foreground="#244B5A" />
-                    <TextBlock Margin="0,4,0,0" Text="{Binding WorkerVersionText}" Foreground="#526165" FontSize="12" />
+                    <TextBlock Text="{Binding ConnectionStateText}" FontWeight="SemiBold" Foreground="{DynamicResource SectionTitleBrush}" />
+                    <TextBlock Margin="0,4,0,0" Text="{Binding WorkerVersionText}" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" />
                 </StackPanel>
             </Border>
         </Grid>
 
-        <TabControl Grid.Row="2" Background="#FFFCF7" BorderBrush="#E0D1BC">
+        <TabControl Grid.Row="2" Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}">
             <TabItem Header="任务">
                 <Grid Margin="18">
                     <Grid.RowDefinitions>
@@ -207,7 +80,7 @@
                         </WrapPanel>
 
                         <WrapPanel Grid.Column="1" HorizontalAlignment="Right">
-                            <TextBlock Margin="0,8,14,0" VerticalAlignment="Center" Foreground="#526165" Text="批量操作" />
+                            <TextBlock Margin="0,8,14,0" VerticalAlignment="Center" Foreground="{DynamicResource TextSecondaryBrush}" Text="批量操作" />
                             <Button x:Name="ToggleSelectAllButton" Click="ToggleSelectAllJobsButton_Click">
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock x:Name="ToggleSelectAllIconTextBlock" FontFamily="Segoe MDL2 Assets" Text="&#xE73E;" Margin="0,0,8,0" VerticalAlignment="Center" />
@@ -248,6 +121,7 @@
                                   CanUserDeleteRows="False"
                                   IsReadOnly="False"
                                   HeadersVisibility="Column"
+                                  RowStyle="{StaticResource JobDataGridRowStyle}"
                                   SelectionMode="Single"
                                   SelectionUnit="FullRow"
                                   ItemsSource="{Binding Jobs}"
@@ -256,21 +130,6 @@
                                   PreviewMouseLeftButtonDown="JobGrid_PreviewMouseLeftButtonDown"
                                   PreviewMouseRightButtonUp="JobGrid_PreviewMouseRightButtonUp"
                                   MouseDoubleClick="JobGrid_MouseDoubleClick">
-                            <DataGrid.Resources>
-                                <SolidColorBrush x:Key="{x:Static SystemColors.HighlightBrushKey}" Color="#CCE4F7" />
-                                <SolidColorBrush x:Key="{x:Static SystemColors.InactiveSelectionHighlightBrushKey}" Color="#CCE4F7" />
-                                <SolidColorBrush x:Key="{x:Static SystemColors.HighlightTextBrushKey}" Color="#111111" />
-                                <Style TargetType="DataGridRow">
-                                    <Setter Property="Background" Value="Transparent" />
-                                    <Setter Property="Foreground" Value="#111111" />
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding IsBatchSelected}" Value="True">
-                                            <Setter Property="Background" Value="#CCE4F7" />
-                                            <Setter Property="Foreground" Value="#111111" />
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </DataGrid.Resources>
                             <DataGrid.Columns>
                                 <DataGridTextColumn x:Name="TitleColumn" Binding="{Binding DisplayTitle}" Header="标题" Width="220" IsReadOnly="True" ElementStyle="{StaticResource TaskTextStyle}" />
                                 <DataGridTextColumn x:Name="PlatformColumn" Binding="{Binding Platform}" Header="平台" Width="120" IsReadOnly="True" ElementStyle="{StaticResource TaskTextStyle}" />
@@ -278,12 +137,16 @@
                                 <DataGridTemplateColumn x:Name="StatusColumn" Header="状态" Width="94" IsReadOnly="True">
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate>
-                                            <Border Background="{Binding StatusBackground}"
-                                                    BorderBrush="{Binding StatusBorder}"
+                                            <Border Style="{StaticResource StatusBadgeBorderStyle}"
+                                                    Tag="{Binding StatusInfo}"
                                                     BorderThickness="1"
                                                     Padding="8,3"
                                                     VerticalAlignment="Center">
-                                                <TextBlock Text="{Binding StatusInfo}" Foreground="{Binding StatusForeground}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                                <TextBlock Text="{Binding StatusInfo}"
+                                                           Tag="{Binding StatusInfo}"
+                                                           Style="{StaticResource StatusBadgeTextStyle}"
+                                                           HorizontalAlignment="Center"
+                                                           VerticalAlignment="Center" />
                                             </Border>
                                         </DataTemplate>
                                     </DataGridTemplateColumn.CellTemplate>
@@ -318,7 +181,7 @@
                                                 <Button Style="{StaticResource RowActionButtonStyle}" Click="RowOpenFileButton_Click" Tag="{Binding}" ToolTip="播放最新文件">
                                                     <Viewbox Width="14" Height="14">
                                                         <Grid Width="16" Height="16">
-                                                            <Ellipse Stroke="#111111" StrokeThickness="1.1" />
+                                                            <Ellipse Stroke="{DynamicResource TextPrimaryBrush}" StrokeThickness="1.1" />
                                                             <TextBlock FontFamily="Segoe MDL2 Assets"
                                                                        Text="&#xE768;"
                                                                        FontSize="8.5"
@@ -344,61 +207,51 @@
                                 </ItemsControl.ItemsPanel>
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
-                                        <Border Width="340"
+                                        <Border Style="{StaticResource JobCardBorderStyle}"
+                                                Uid="{Binding StatusInfo}"
+                                                Width="340"
                                                 Margin="0,0,12,12"
                                                 Padding="10"
-                                                Background="#FFFFFF"
-                                                BorderBrush="{Binding StatusBorder}"
                                                 BorderThickness="2"
                                                 MouseLeftButtonDown="TaskCard_MouseLeftButtonDown"
                                                 Tag="{Binding}">
-                                            <Grid>
+                                            <Grid Style="{StaticResource SelectableCardGridStyle}">
                                                 <Grid.RowDefinitions>
                                                     <RowDefinition Height="Auto" />
                                                     <RowDefinition Height="Auto" />
                                                     <RowDefinition Height="Auto" />
                                                     <RowDefinition Height="Auto" />
                                                 </Grid.RowDefinitions>
-                                                <Grid.Style>
-                                                    <Style TargetType="Grid">
-                                                        <Setter Property="Background" Value="#FFFFFF" />
-                                                        <Style.Triggers>
-                                                            <DataTrigger Binding="{Binding IsBatchSelected}" Value="True">
-                                                                <Setter Property="Background" Value="#CCE4F7" />
-                                                            </DataTrigger>
-                                                        </Style.Triggers>
-                                                    </Style>
-                                                </Grid.Style>
 
                                                 <DockPanel>
                                                     <Border DockPanel.Dock="Right"
-                                                            Background="{Binding StatusBackground}"
-                                                            BorderBrush="{Binding StatusBorder}"
+                                                            Style="{StaticResource StatusBadgeBorderStyle}"
+                                                            Tag="{Binding StatusInfo}"
                                                             BorderThickness="1"
                                                             Padding="8,3"
                                                             Margin="8,0,0,0">
-                                                        <TextBlock Text="{Binding StatusInfo}" Foreground="{Binding StatusForeground}" />
+                                                        <TextBlock Text="{Binding StatusInfo}" Tag="{Binding StatusInfo}" Style="{StaticResource StatusBadgeTextStyle}" />
                                                     </Border>
                                                     <TextBlock Text="{Binding DisplayTitle}" FontWeight="Bold" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
                                                 </DockPanel>
 
-                                                <TextBlock Grid.Row="1" Margin="0,8,0,0" Text="{Binding Url}" TextTrimming="CharacterEllipsis" Foreground="#555555" />
+                                                <TextBlock Grid.Row="1" Margin="0,8,0,0" Text="{Binding Url}" TextTrimming="CharacterEllipsis" Foreground="{DynamicResource TextSecondaryBrush}" />
 
                                                 <UniformGrid Grid.Row="2" Columns="4" Margin="0,10,0,0">
                                                     <StackPanel>
-                                                        <TextBlock Text="平台" Foreground="#666666" />
+                                                        <TextBlock Text="平台" Foreground="{DynamicResource TextSecondaryBrush}" />
                                                         <TextBlock Text="{Binding Platform}" FontWeight="SemiBold" />
                                                     </StackPanel>
                                                     <StackPanel>
-                                                        <TextBlock Text="画质" Foreground="#666666" />
+                                                        <TextBlock Text="画质" Foreground="{DynamicResource TextSecondaryBrush}" />
                                                         <TextBlock Text="{Binding DisplayQuality}" FontWeight="SemiBold" />
                                                     </StackPanel>
                                                     <StackPanel>
-                                                        <TextBlock Text="时长" Foreground="#666666" />
+                                                        <TextBlock Text="时长" Foreground="{DynamicResource TextSecondaryBrush}" />
                                                         <TextBlock Text="{Binding DurationText}" FontWeight="SemiBold" />
                                                     </StackPanel>
                                                     <StackPanel>
-                                                        <TextBlock Text="速度" Foreground="#666666" />
+                                                        <TextBlock Text="速度" Foreground="{DynamicResource TextSecondaryBrush}" />
                                                         <TextBlock Text="{Binding SpeedText}" FontWeight="SemiBold" />
                                                     </StackPanel>
                                                 </UniformGrid>
@@ -413,7 +266,7 @@
                                                     <Button Style="{StaticResource RowActionButtonStyle}" Click="RowOpenFileButton_Click" Tag="{Binding}" ToolTip="播放最新文件">
                                                         <Viewbox Width="14" Height="14">
                                                             <Grid Width="16" Height="16">
-                                                                <Ellipse Stroke="#111111" StrokeThickness="1.1" />
+                                                                <Ellipse Stroke="{DynamicResource TextPrimaryBrush}" StrokeThickness="1.1" />
                                                                 <TextBlock FontFamily="Segoe MDL2 Assets"
                                                                            Text="&#xE768;"
                                                                            FontSize="8.5"
@@ -436,12 +289,12 @@
                     <Grid x:Name="EditorOverlay"
                           Grid.RowSpan="2"
                           Visibility="Collapsed"
-                          Background="#880E1117">
+                          Background="{DynamicResource OverlayBrush}">
                         <Border Width="760"
                                 MaxHeight="760"
                                 Padding="20"
-                                Background="#F7F2E8"
-                                BorderBrush="#E0D1BC"
+                                Background="{DynamicResource ElevatedSurfaceBrush}"
+                                BorderBrush="{DynamicResource BorderBrush}"
                                 BorderThickness="1"
                                 CornerRadius="0"
                                 HorizontalAlignment="Center"
@@ -454,8 +307,8 @@
                                 </Grid.RowDefinitions>
 
                                 <StackPanel>
-                                    <TextBlock x:Name="EditorTitleTextBlock" Text="新建任务" FontSize="24" FontWeight="Bold" Foreground="#1D4654" />
-                                    <TextBlock Margin="0,6,0,0" Text="当前处于编辑模式。请点击取消或确定保存后再继续操作其他内容。按 Esc 也可取消。" Foreground="#526165" TextWrapping="Wrap" />
+                                    <TextBlock x:Name="EditorTitleTextBlock" Text="新建任务" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource SectionTitleBrush}" />
+                                    <TextBlock Margin="0,6,0,0" Text="当前处于编辑模式。请点击取消或确定保存后再继续操作其他内容。按 Esc 也可取消。" Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap" />
                                 </StackPanel>
 
                                 <TabControl x:Name="EditorTabs" Grid.Row="1" Margin="0,18,0,18">
@@ -520,7 +373,7 @@
                                                     <TextBlock Grid.Row="5"
                                                                Grid.Column="1"
                                                                Margin="0,2,0,0"
-                                                               Foreground="#6B7B7E"
+                                                               Foreground="{DynamicResource TextMutedBrush}"
                                                                Text="留空时按默认保存路径自动分平台和主播"
                                                                TextWrapping="Wrap" />
 
@@ -552,7 +405,7 @@
                                                     <RowDefinition Height="Auto" />
                                                     <RowDefinition Height="*" />
                                                 </Grid.RowDefinitions>
-                                                <TextBlock Text="每行一条，支持：画质编号,链接,主播名。&#10;示例：&#10;0,https://live.douyin.com/123456,主播1&#10;2,https://www.twitch.tv/demo,主播2&#10;https://live.bilibili.com/320" TextWrapping="Wrap" Foreground="#526165" />
+                                                <TextBlock Text="每行一条，支持：画质编号,链接,主播名。&#10;示例：&#10;0,https://live.douyin.com/123456,主播1&#10;2,https://www.twitch.tv/demo,主播2&#10;https://live.bilibili.com/320" TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" />
                                                 <TextBox x:Name="BatchTextBox"
                                                          Grid.Row="1"
                                                          Margin="0,14,0,0"
@@ -576,11 +429,11 @@
                     <Grid x:Name="ColumnOverlay"
                           Grid.RowSpan="2"
                           Visibility="Collapsed"
-                          Background="#660E1117">
+                          Background="{DynamicResource OverlayBrush}">
                         <Border Width="420"
                                 Padding="20"
-                                Background="#F7F2E8"
-                                BorderBrush="#C8C8C8"
+                                Background="{DynamicResource ElevatedSurfaceBrush}"
+                                BorderBrush="{DynamicResource BorderStrongBrush}"
                                 BorderThickness="1"
                                 HorizontalAlignment="Center"
                                 VerticalAlignment="Center">
@@ -592,8 +445,8 @@
                                 </Grid.RowDefinitions>
 
                                 <StackPanel>
-                                    <TextBlock Text="选择列" FontSize="22" FontWeight="Bold" Foreground="#1D4654" />
-                                    <TextBlock Margin="0,6,0,0" Text="勾选需要在任务列表中显示的列。" Foreground="#526165" />
+                                    <TextBlock Text="选择列" FontSize="22" FontWeight="Bold" Foreground="{DynamicResource SectionTitleBrush}" />
+                                    <TextBlock Margin="0,6,0,0" Text="勾选需要在任务列表中显示的列。" Foreground="{DynamicResource TextSecondaryBrush}" />
                                 </StackPanel>
 
                                 <StackPanel Grid.Row="1" Margin="0,18,0,18">
@@ -709,6 +562,21 @@
                                             <CheckBox Content="开机自动启动（自启动时不显示主窗口）" IsChecked="{Binding StartWithWindows}" />
                                             <CheckBox Content="点击最小化时缩到托盘" IsChecked="{Binding Settings.MinimizeToTrayOnMinimize}" />
                                             <CheckBox Content="点击关闭时缩到托盘" IsChecked="{Binding Settings.MinimizeToTrayOnClose}" />
+                                        </StackPanel>
+                                    </GroupBox>
+
+                                    <GroupBox Style="{StaticResource SettingsGroupBoxStyle}" Header="外观" Margin="0,0,12,12" Padding="14" Width="340">
+                                        <StackPanel>
+                                            <TextBlock Text="主题" />
+                                            <ComboBox SelectedValuePath="Tag" SelectedValue="{Binding Settings.ThemeMode}">
+                                                <ComboBoxItem Tag="light" Content="浅色" />
+                                                <ComboBoxItem Tag="dark" Content="深色" />
+                                                <ComboBoxItem Tag="system" Content="跟随系统" />
+                                            </ComboBox>
+                                            <TextBlock Margin="0,10,0,0"
+                                                       Text="跟随系统时按 Windows 应用模式自动切换"
+                                                       TextWrapping="Wrap"
+                                                       Foreground="{DynamicResource TextSecondaryBrush}" />
                                         </StackPanel>
                                     </GroupBox>
                                 </WrapPanel>
@@ -867,7 +735,7 @@
                                Margin="0,16,0,0"
                                HorizontalAlignment="Right"
                                VerticalAlignment="Center"
-                               Foreground="#526165"
+                               Foreground="{DynamicResource TextSecondaryBrush}"
                                Text="设置自动保存" />
                 </Grid>
             </TabItem>
@@ -882,9 +750,9 @@
 
                     <ScrollViewer VerticalScrollBarVisibility="Auto">
                         <StackPanel>
-                            <Border Padding="18" CornerRadius="0" Background="#F7F2E8" BorderBrush="#E0D1BC" BorderThickness="1">
+                            <Border Padding="18" CornerRadius="0" Background="{DynamicResource ElevatedSurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
                                 <StackPanel>
-                                    <TextBlock Text="路径信息" FontSize="18" FontWeight="Bold" Foreground="#1D4654" />
+                                    <TextBlock Text="路径信息" FontSize="18" FontWeight="Bold" Foreground="{DynamicResource SectionTitleBrush}" />
                                     <TextBlock Margin="0,16,0,0" Text="仓库根目录" />
                                     <TextBox IsReadOnly="True" Text="{Binding RepositoryRoot, Mode=OneWay}" />
                                     <TextBlock Margin="0,10,0,0" Text="核心服务目录" />
@@ -894,9 +762,9 @@
                                 </StackPanel>
                             </Border>
 
-                            <Border Margin="0,18,0,0" Padding="18" CornerRadius="0" Background="#F7F2E8" BorderBrush="#E0D1BC" BorderThickness="1">
+                            <Border Margin="0,18,0,0" Padding="18" CornerRadius="0" Background="{DynamicResource ElevatedSurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
                                 <StackPanel>
-                                    <TextBlock Text="维护操作" FontSize="18" FontWeight="Bold" Foreground="#1D4654" />
+                                    <TextBlock Text="维护操作" FontSize="18" FontWeight="Bold" Foreground="{DynamicResource SectionTitleBrush}" />
                                     <WrapPanel Margin="0,16,0,0">
                                         <Button Click="PingButton_Click" Content="测试核心服务" />
                                         <Button Click="RefreshDependenciesButton_Click" Content="刷新依赖状态" />
@@ -905,9 +773,9 @@
                                 </StackPanel>
                             </Border>
 
-                            <Border Margin="0,18,0,0" Padding="18" CornerRadius="0" Background="#F7F2E8" BorderBrush="#E0D1BC" BorderThickness="1">
+                            <Border Margin="0,18,0,0" Padding="18" CornerRadius="0" Background="{DynamicResource ElevatedSurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
                                 <StackPanel>
-                                    <TextBlock Text="依赖状态" FontSize="18" FontWeight="Bold" Foreground="#1D4654" />
+                                    <TextBlock Text="依赖状态" FontSize="18" FontWeight="Bold" Foreground="{DynamicResource SectionTitleBrush}" />
                                     <DataGrid Margin="0,14,0,0"
                                               AutoGenerateColumns="False"
                                               CanUserAddRows="False"
@@ -927,7 +795,7 @@
                         </StackPanel>
                     </ScrollViewer>
 
-                    <Border Grid.Column="2" Padding="18" CornerRadius="0" Background="#FFFDF7" BorderBrush="#E0D1BC" BorderThickness="1">
+                    <Border Grid.Column="2" Padding="18" CornerRadius="0" Background="{DynamicResource ElevatedSurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
                         <Grid>
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto" />
@@ -935,7 +803,7 @@
                             </Grid.RowDefinitions>
 
                             <Grid Grid.Row="0">
-                                <TextBlock Text="核心服务日志" FontSize="18" FontWeight="Bold" Foreground="#1D4654" VerticalAlignment="Center" />
+                                <TextBlock Text="核心服务日志" FontSize="18" FontWeight="Bold" Foreground="{DynamicResource SectionTitleBrush}" VerticalAlignment="Center" />
                                 <Button HorizontalAlignment="Right"
                                         VerticalAlignment="Center"
                                         Click="CopyLogsButton_Click"

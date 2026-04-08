@@ -23,6 +23,7 @@ public partial class MainWindow : global::System.Windows.Window
     private bool _isCardLayout = true;
     private string? _editingJobId;
     private ContextMenu? _columnMenu;
+    private AppThemeService? _themeService;
 
     public MainWindow(bool launchToTrayOnStartup = false)
     {
@@ -32,12 +33,28 @@ public partial class MainWindow : global::System.Windows.Window
         ApplyInitialWindowBounds();
         DataContext = _viewModel;
         UpdateLayoutState();
+        SourceInitialized += MainWindow_SourceInitialized;
         PreviewKeyDown += MainWindow_PreviewKeyDown;
         Loaded += MainWindow_Loaded;
         Closing += MainWindow_Closing;
         StateChanged += MainWindow_StateChanged;
         _viewModel.Jobs.CollectionChanged += Jobs_CollectionChanged;
+        _viewModel.Settings.PropertyChanged += ViewModelSettings_PropertyChanged;
         _viewModel.DesktopNotificationRequested += OnDesktopNotificationRequested;
+
+        if (global::System.Windows.Application.Current is App app)
+        {
+            _themeService = app.ThemeService;
+            _themeService.ThemeChanged += ThemeService_ThemeChanged;
+        }
+    }
+
+    private void MainWindow_SourceInitialized(object? sender, EventArgs e)
+    {
+        if (_themeService is not null)
+        {
+            WindowFrameThemeService.Apply(this, _themeService.IsDarkThemeActive);
+        }
     }
 
     private async void MainWindow_Loaded(object sender, global::System.Windows.RoutedEventArgs e)
@@ -80,10 +97,16 @@ public partial class MainWindow : global::System.Windows.Window
 
         Loaded -= MainWindow_Loaded;
         Closing -= MainWindow_Closing;
+        SourceInitialized -= MainWindow_SourceInitialized;
         StateChanged -= MainWindow_StateChanged;
         PreviewKeyDown -= MainWindow_PreviewKeyDown;
         _viewModel.Jobs.CollectionChanged -= Jobs_CollectionChanged;
+        _viewModel.Settings.PropertyChanged -= ViewModelSettings_PropertyChanged;
         _viewModel.DesktopNotificationRequested -= OnDesktopNotificationRequested;
+        if (_themeService is not null)
+        {
+            _themeService.ThemeChanged -= ThemeService_ThemeChanged;
+        }
         _trayService?.Dispose();
         await _viewModel.ShutdownAsync();
     }
@@ -101,6 +124,20 @@ public partial class MainWindow : global::System.Windows.Window
     private void OnDesktopNotificationRequested(string title, string message)
     {
         Dispatcher.Invoke(() => _trayService?.ShowNotification(title, message));
+    }
+
+    private void ThemeService_ThemeChanged(bool isDarkTheme)
+    {
+        Dispatcher.Invoke(() => WindowFrameThemeService.Apply(this, isDarkTheme));
+    }
+
+    private void ViewModelSettings_PropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(CoreSettings.ThemeMode) && global::System.Windows.Application.Current is App app)
+        {
+            app.ThemeService.ApplyTheme(_viewModel.Settings.ThemeMode);
+            WindowFrameThemeService.Apply(this, app.ThemeService.IsDarkThemeActive);
+        }
     }
 
     private void ExitFromTray()
@@ -985,9 +1022,13 @@ public partial class MainWindow : global::System.Windows.Window
             Width = 760,
             Height = 560,
             WindowStartupLocation = WindowStartupLocation.CenterOwner,
-            Background = new SolidColorBrush(global::System.Windows.Media.Color.FromRgb(247, 242, 232)),
             Content = layoutRoot,
         };
+
+        if (global::System.Windows.Application.Current is App app)
+        {
+            window.SourceInitialized += (_, _) => WindowFrameThemeService.Apply(window, app.ThemeService.IsDarkThemeActive);
+        }
 
         closeButton.Click += (_, _) => window.Close();
         window.ShowDialog();

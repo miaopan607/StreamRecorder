@@ -8,7 +8,10 @@ public partial class App : global::System.Windows.Application
 {
     private const string StartupArgument = "--startup";
     private readonly SingleInstanceService _singleInstanceService = new();
+    private readonly AppThemeService _themeService = new();
     private bool _pendingActivationRequest;
+
+    public AppThemeService ThemeService => _themeService;
 
     protected override void OnStartup(global::System.Windows.StartupEventArgs e)
     {
@@ -20,6 +23,8 @@ public partial class App : global::System.Windows.Application
         }
 
         base.OnStartup(e);
+        _themeService.Initialize();
+        _themeService.ApplyTheme(_themeService.LoadStoredThemeMode());
 
         var launchToTray = e.Args.Any(arg => string.Equals(arg, StartupArgument, StringComparison.OrdinalIgnoreCase));
         var mainWindow = new MainWindow(launchToTray);
@@ -44,6 +49,7 @@ public partial class App : global::System.Windows.Application
 
     protected override void OnExit(global::System.Windows.ExitEventArgs e)
     {
+        _themeService.Dispose();
         _singleInstanceService.Dispose();
         base.OnExit(e);
     }

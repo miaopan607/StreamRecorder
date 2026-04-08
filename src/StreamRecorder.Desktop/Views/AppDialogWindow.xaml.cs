@@ -1,10 +1,13 @@
 using System.Windows;
 using System.Windows.Media;
+using StreamRecorder.Desktop.Services;
 
 namespace StreamRecorder.Desktop.Views;
 
 public partial class AppDialogWindow : Window
 {
+    private readonly AppThemeService? _themeService;
+
     private AppDialogWindow(string title, string message, MessageBoxImage icon, bool showCancel)
     {
         InitializeComponent();
@@ -12,7 +15,38 @@ public partial class AppDialogWindow : Window
         MessageTextBlock.Text = message;
         CancelButton.Visibility = showCancel ? Visibility.Visible : Visibility.Collapsed;
         SetIcon(icon);
+        if (global::System.Windows.Application.Current is App app)
+        {
+            _themeService = app.ThemeService;
+            _themeService.ThemeChanged += ThemeService_ThemeChanged;
+            SourceInitialized += AppDialogWindow_SourceInitialized;
+            Closed += AppDialogWindow_Closed;
+        }
+
         Loaded += (_, _) => ConfirmButton.Focus();
+    }
+
+    private void AppDialogWindow_SourceInitialized(object? sender, EventArgs e)
+    {
+        if (_themeService is not null)
+        {
+            WindowFrameThemeService.Apply(this, _themeService.IsDarkThemeActive);
+        }
+    }
+
+    private void AppDialogWindow_Closed(object? sender, EventArgs e)
+    {
+        SourceInitialized -= AppDialogWindow_SourceInitialized;
+        Closed -= AppDialogWindow_Closed;
+        if (_themeService is not null)
+        {
+            _themeService.ThemeChanged -= ThemeService_ThemeChanged;
+        }
+    }
+
+    private void ThemeService_ThemeChanged(bool isDarkTheme)
+    {
+        Dispatcher.Invoke(() => WindowFrameThemeService.Apply(this, isDarkTheme));
     }
 
     public static void ShowMessage(Window? owner, string title, string message, MessageBoxImage icon)
@@ -46,16 +80,16 @@ public partial class AppDialogWindow : Window
 
     private void SetIcon(MessageBoxImage icon)
     {
-        var (background, foreground, text) = icon switch
+        var (backgroundKey, foregroundKey, text) = icon switch
         {
-            MessageBoxImage.Error => (System.Windows.Media.Color.FromRgb(246, 221, 221), System.Windows.Media.Color.FromRgb(148, 37, 37), "!"),
-            MessageBoxImage.Warning => (System.Windows.Media.Color.FromRgb(250, 236, 205), System.Windows.Media.Color.FromRgb(142, 95, 27), "!"),
-            MessageBoxImage.Question => (System.Windows.Media.Color.FromRgb(221, 234, 244), System.Windows.Media.Color.FromRgb(29, 70, 84), "?"),
-            _ => (System.Windows.Media.Color.FromRgb(221, 234, 244), System.Windows.Media.Color.FromRgb(29, 70, 84), "i"),
+            MessageBoxImage.Error => ("DialogErrorBackgroundBrush", "DialogErrorForegroundBrush", "!"),
+            MessageBoxImage.Warning => ("DialogWarningBackgroundBrush", "DialogWarningForegroundBrush", "!"),
+            MessageBoxImage.Question => ("DialogInfoBackgroundBrush", "DialogInfoForegroundBrush", "?"),
+            _ => ("DialogInfoBackgroundBrush", "DialogInfoForegroundBrush", "i"),
         };
 
-        IconBadge.Background = new SolidColorBrush(background);
-        IconTextBlock.Foreground = new SolidColorBrush(foreground);
+        IconBadge.SetResourceReference(BackgroundProperty, backgroundKey);
+        IconTextBlock.SetResourceReference(global::System.Windows.Controls.TextBlock.ForegroundProperty, foregroundKey);
         IconTextBlock.Text = text;
     }
 }

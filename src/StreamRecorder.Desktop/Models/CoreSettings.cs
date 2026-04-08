@@ -75,6 +75,7 @@ public sealed class CoreSettings : ObservableObject
     private string _senderName = string.Empty;
     private string _recipientEmail = string.Empty;
     private string _platformMaxConcurrentRequests = "3";
+    private string _themeMode = "light";
     private bool _minimizeToTrayOnMinimize;
     private bool _minimizeToTrayOnClose = true;
 
@@ -216,6 +217,8 @@ public sealed class CoreSettings : ObservableObject
 
     public string PlatformMaxConcurrentRequests { get => _platformMaxConcurrentRequests; set => SetProperty(ref _platformMaxConcurrentRequests, value); }
 
+    public string ThemeMode { get => _themeMode; set => SetProperty(ref _themeMode, NormalizeThemeMode(value)); }
+
     public bool MinimizeToTrayOnMinimize { get => _minimizeToTrayOnMinimize; set => SetProperty(ref _minimizeToTrayOnMinimize, value); }
 
     public bool MinimizeToTrayOnClose { get => _minimizeToTrayOnClose; set => SetProperty(ref _minimizeToTrayOnClose, value); }
@@ -290,6 +293,7 @@ public sealed class CoreSettings : ObservableObject
         SenderEmail = GetString(element, "sender_email");
         SenderName = GetString(element, "sender_name");
         RecipientEmail = GetString(element, "recipient_email");
+        ThemeMode = GetString(element, "theme_mode", "light");
         PlatformMaxConcurrentRequests = GetString(element, "platform_max_concurrent_requests", "3");
         MinimizeToTrayOnMinimize = GetBool(element, "minimize_to_tray_on_minimize");
         MinimizeToTrayOnClose = GetBool(element, "minimize_to_tray_on_close", true);
@@ -367,6 +371,7 @@ public sealed class CoreSettings : ObservableObject
             ["sender_email"] = SenderEmail,
             ["sender_name"] = SenderName,
             ["recipient_email"] = RecipientEmail,
+            ["theme_mode"] = ThemeMode,
             ["platform_max_concurrent_requests"] = PlatformMaxConcurrentRequests,
             ["minimize_to_tray_on_minimize"] = MinimizeToTrayOnMinimize,
             ["minimize_to_tray_on_close"] = MinimizeToTrayOnClose,
@@ -393,6 +398,16 @@ public sealed class CoreSettings : ObservableObject
             JsonValueKind.False => false,
             JsonValueKind.String => bool.TryParse(property.GetString(), out var parsed) ? parsed : fallback,
             _ => fallback,
+        };
+    }
+
+    private static string NormalizeThemeMode(string? value)
+    {
+        return value?.Trim().ToLowerInvariant() switch
+        {
+            "dark" => "dark",
+            "system" => "system",
+            _ => "light",
         };
     }
 }
