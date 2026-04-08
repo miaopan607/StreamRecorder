@@ -54,7 +54,7 @@ python -m streamrecorder_worker --stdio --data-root .\runtime
 先发布桌面程序：
 
 ```powershell
-dotnet publish .\src\StreamRecorder.Desktop\StreamRecorder.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=false -o .\artifacts\publish\win-x64
+dotnet publish .\src\StreamRecorder.Desktop\StreamRecorder.csproj -c Release -r win-x64 -o .\artifacts\publish\win-x64
 ```
 
 然后把以下内容放到发布目录同级：
@@ -73,6 +73,8 @@ artifacts/publish/win-x64/
 ```
 
 注意：当前版本默认通过 `python` 启动核心服务，因此目标机器仍需要可用的 Python 环境。
+
+注意：当前 Release 默认是较小体积的单文件框架依赖发布，目标机器还需要安装 `.NET 8 Desktop Runtime`。
 
 ## 许可证
 

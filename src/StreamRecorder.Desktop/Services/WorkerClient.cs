@@ -26,6 +26,7 @@ public sealed class WorkerClient : IAsyncDisposable
             return;
         }
 
+        EmbeddedWorkerService.EnsureExtracted();
         Directory.CreateDirectory(ProjectPaths.WorkerDataRoot);
 
         var startInfo = new ProcessStartInfo

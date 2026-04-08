@@ -41,14 +41,15 @@ public partial class MainWindow : global::System.Windows.Window
 
     private async void MainWindow_Loaded(object sender, global::System.Windows.RoutedEventArgs e)
     {
+        _trayService = new TrayService(this, ExitFromTray);
+        ApplySavedColumnVisibility();
+        HideEditorOverlay();
+        UpdateLayoutState();
+        UpdateToggleSelectAllButtonText();
+
         try
         {
-            _trayService = new TrayService(this, ExitFromTray);
             await _viewModel.InitializeAsync();
-            ApplySavedColumnVisibility();
-            HideEditorOverlay();
-            UpdateLayoutState();
-            UpdateToggleSelectAllButtonText();
             if (_launchToTrayOnStartup)
             {
                 HideToTray(null, normalizeWindowState: false);
@@ -265,6 +266,25 @@ public partial class MainWindow : global::System.Windows.Window
         catch (Exception ex)
         {
             global::System.Windows.MessageBox.Show(this, ex.Message, "打开目录失败", global::System.Windows.MessageBoxButton.OK, global::System.Windows.MessageBoxImage.Error);
+        }
+    }
+
+    private void CopyLogsButton_Click(object sender, global::System.Windows.RoutedEventArgs e)
+    {
+        try
+        {
+            var text = string.Join(Environment.NewLine, _viewModel.Logs);
+            if (string.IsNullOrWhiteSpace(text))
+            {
+                global::System.Windows.MessageBox.Show(this, "当前没有可复制的日志。", "复制日志", global::System.Windows.MessageBoxButton.OK, global::System.Windows.MessageBoxImage.Information);
+                return;
+            }
+
+            global::System.Windows.Clipboard.SetText(text);
+        }
+        catch (Exception ex)
+        {
+            global::System.Windows.MessageBox.Show(this, ex.Message, "复制日志失败", global::System.Windows.MessageBoxButton.OK, global::System.Windows.MessageBoxImage.Error);
         }
     }
 

@@ -575,13 +575,13 @@ class StreamRecorderWorkerApp:
 
     def _build_output_dir(self, job: RecordingJob, stream_info: Any) -> Path:
         if job.recording_dir:
-            return Path(job.recording_dir)
+            return self._resolve_output_path(job.recording_dir)
 
         base_dir_text = str(self.settings.get("live_save_path") or "").strip()
         if not base_dir_text:
             base_dir = self.store.data_root / "recordings"
         else:
-            base_dir = Path(base_dir_text)
+            base_dir = self._resolve_output_path(base_dir_text)
 
         anchor_name = self._sanitize_name(
             stream_info.anchor_name or job.streamer_name or "直播间"
@@ -601,6 +601,12 @@ class StreamRecorderWorkerApp:
         ):
             folder = folder / self._sanitize_name(stream_info.title)
         return folder
+
+    def _resolve_output_path(self, path_text: str) -> Path:
+        path = Path(path_text).expanduser()
+        if path.is_absolute():
+            return path
+        return (self.store.data_root.parent / path).resolve(strict=False)
 
     def _build_base_name(self, job: RecordingJob, stream_info: Any) -> str:
         now_text = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")

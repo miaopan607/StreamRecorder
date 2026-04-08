@@ -13,8 +13,24 @@
     <ApplicationIcon>Assets\StreamRecorder.ico</ApplicationIcon>
   </PropertyGroup>
 
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+    <SelfContained>false</SelfContained>
+    <UseAppHost>true</UseAppHost>
+    <PublishSingleFile>true</PublishSingleFile>
+    <PublishReadyToRun>false</PublishReadyToRun>
+    <DebugType>none</DebugType>
+    <DebugSymbols>false</DebugSymbols>
+    <SatelliteResourceLanguages>zh-CN</SatelliteResourceLanguages>
+  </PropertyGroup>
+
   <ItemGroup>
     <Resource Include="Assets\StreamRecorder.ico" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="..\..\worker\streamrecorder_worker\*.py">
+      <LogicalName>StreamRecorder.WorkerAssets.%(Filename)%(Extension)</LogicalName>
+    </EmbeddedResource>
   </ItemGroup>
 
 </Project>

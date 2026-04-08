@@ -13,6 +13,13 @@ namespace StreamRecorder.Desktop.ViewModels;
 
 public sealed class MainViewModel : ObservableObject, IAsyncDisposable
 {
+    private static readonly (string Name, string Command, string VersionArguments)[] LocalDependencyDefinitions =
+    {
+        ("PYTHON", "python", "--version"),
+        ("FFMPEG", "ffmpeg", "-version"),
+        ("NODE", "node", "--version"),
+    };
+
     private static readonly string[] CookiePlatforms =
     {
         "douyin", "tiktok", "kuaishou", "huya", "douyu", "yy", "bilibili", "xhs", "bigo", "blued",
@@ -58,6 +65,8 @@ public sealed class MainViewModel : ObservableObject, IAsyncDisposable
         Settings.PropertyChanged += Settings_PropertyChanged;
         PropertyChanged += MainViewModel_PropertyChanged;
         SeedDefaultEntries();
+        Settings.LiveSavePath = GetEffectiveSavePath();
+        RefreshStorage();
     }
 
     public event Action<string, string>? DesktopNotificationRequested;
@@ -141,13 +150,27 @@ public sealed class MainViewModel : ObservableObject, IAsyncDisposable
         ConnectionStateText = "正在启动核心服务";
         _suppressSettingsAutoSave = true;
         StartWithWindows = _autoStartService.IsEnabled();
-        await _workerClient.StartAsync();
-        await ReloadSnapshotAsync();
-        await ReloadConfigEditorsAsync();
-        await RefreshDependenciesAsync();
-        RefreshStorage();
-        _suppressSettingsAutoSave = false;
-        _settingsAutoSaveEnabled = true;
+        try
+        {
+            await _workerClient.StartAsync();
+            await ReloadSnapshotAsync();
+            await ReloadConfigEditorsAsync();
+            await RefreshDependenciesAsync();
+            RefreshStorage();
+            _settingsAutoSaveEnabled = true;
+        }
+        catch
+        {
+            WorkerVersionText = "StreamRecorder 核心服务未连接";
+            ConnectionStateText = "未连接 | Python 核心服务不可用";
+            await RefreshDependenciesAsync();
+            RefreshStorage();
+            throw;
+        }
+        finally
+        {
+            _suppressSettingsAutoSave = false;
+        }
     }
 
     public async Task ReloadSnapshotAsync()
@@ -339,6 +362,12 @@ public sealed class MainViewModel : ObservableObject, IAsyncDisposable
 
     public async Task RefreshDependenciesAsync()
     {
+        if (!_workerClient.IsRunning)
+        {
+            await RefreshLocalDependenciesAsync();
+            return;
+        }
+
         var result = await _workerClient.CallAsync("dependencies.get");
         await global::System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
         {
@@ -357,6 +386,158 @@ public sealed class MainViewModel : ObservableObject, IAsyncDisposable
             var missing = Dependencies.Count(item => !item.Available);
             DependencySummaryText = missing == 0 ? "依赖检查通过" : $"有 {missing} 个依赖未就绪";
         });
+    }
+
+    private async Task RefreshLocalDependenciesAsync()
+    {
+        var dependencies = new List<DependencyStatus>();
+        foreach (var definition in LocalDependencyDefinitions)
+        {
+            dependencies.Add(await ProbeDependencyAsync(definition.Name, definition.Command, definition.VersionArguments));
+        }
+
+        await global::System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
+        {
+            Dependencies.Clear();
+            foreach (var dependency in dependencies)
+            {
+                Dependencies.Add(dependency);
+            }
+
+            var missing = Dependencies.Count(item => !item.Available);
+            DependencySummaryText = missing == 0 ? "依赖检查通过（本地检测）" : $"有 {missing} 个依赖未就绪（本地检测）";
+        });
+    }
+
+    private static async Task<DependencyStatus> ProbeDependencyAsync(string name, string command, string versionArguments)
+    {
+        var path = ResolveCommandPath(command);
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            return new DependencyStatus
+            {
+                Name = name,
+                Available = false,
+                Version = string.Empty,
+                Path = string.Empty,
+            };
+        }
+
+        var version = await ReadCommandVersionAsync(path, versionArguments, name);
+
+        return new DependencyStatus
+        {
+            Name = name,
+            Available = !string.IsNullOrWhiteSpace(version),
+            Version = version,
+            Path = path,
+        };
+    }
+
+    private static async Task<string> ReadCommandVersionAsync(string executablePath, string arguments, string name)
+    {
+        try
+        {
+            using var process = new Process
+            {
+                StartInfo = new ProcessStartInfo
+                {
+                    FileName = executablePath,
+                    Arguments = arguments,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
+                },
+            };
+
+            process.Start();
+            var stdoutTask = process.StandardOutput.ReadToEndAsync();
+            var stderrTask = process.StandardError.ReadToEndAsync();
+            await process.WaitForExitAsync().WaitAsync(TimeSpan.FromSeconds(3));
+            var output = ((await stdoutTask) + "\n" + (await stderrTask)).Trim();
+
+            if (process.ExitCode != 0 || LooksLikeMissingPythonAlias(output))
+            {
+                return string.Empty;
+            }
+
+            return SimplifyVersionText(output, name);
+        }
+        catch
+        {
+            return string.Empty;
+        }
+    }
+
+    private static string SimplifyVersionText(string output, string name)
+    {
+        if (string.IsNullOrWhiteSpace(output))
+        {
+            return string.Empty;
+        }
+
+        var firstLine = output.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries).FirstOrDefault()?.Trim() ?? string.Empty;
+        return name switch
+        {
+            "FFMPEG" when firstLine.StartsWith("ffmpeg version ", StringComparison.OrdinalIgnoreCase) => firstLine[15..].Split(' ').FirstOrDefault() ?? string.Empty,
+            "NODE" when firstLine.StartsWith("v", StringComparison.OrdinalIgnoreCase) => firstLine[1..],
+            "PYTHON" when firstLine.StartsWith("Python ", StringComparison.OrdinalIgnoreCase) => firstLine[7..],
+            _ => firstLine,
+        };
+    }
+
+    private static bool LooksLikeMissingPythonAlias(string output)
+    {
+        if (string.IsNullOrWhiteSpace(output))
+        {
+            return false;
+        }
+
+        return output.Contains("Python was not found", StringComparison.OrdinalIgnoreCase)
+            || output.Contains("Microsoft Store", StringComparison.OrdinalIgnoreCase)
+            || output.Contains("App Installer", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string? ResolveCommandPath(string command)
+    {
+        var pathValue = Environment.GetEnvironmentVariable("PATH") ?? string.Empty;
+        var searchExtensions = OperatingSystem.IsWindows()
+            ? (Environment.GetEnvironmentVariable("PATHEXT") ?? ".EXE;.CMD;.BAT;.COM")
+                .Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            : new[] { string.Empty };
+
+        var hasExtension = Path.HasExtension(command);
+        foreach (var directory in pathValue.Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            if (hasExtension)
+            {
+                var candidate = Path.Combine(directory, command);
+                if (File.Exists(candidate))
+                {
+                    return candidate;
+                }
+
+                continue;
+            }
+
+            foreach (var extension in searchExtensions)
+            {
+                var candidate = Path.Combine(directory, command + extension.ToLowerInvariant());
+                if (File.Exists(candidate))
+                {
+                    return candidate;
+                }
+
+                candidate = Path.Combine(directory, command + extension.ToUpperInvariant());
+                if (File.Exists(candidate))
+                {
+                    return candidate;
+                }
+            }
+        }
+
+        return null;
     }
 
     public async Task PingAsync()
@@ -509,7 +690,7 @@ public sealed class MainViewModel : ObservableObject, IAsyncDisposable
     {
         return string.IsNullOrWhiteSpace(Settings.LiveSavePath)
             ? Path.Combine(ProjectPaths.RepositoryRoot, "runtime", "recordings")
-            : Settings.LiveSavePath;
+            : ProjectPaths.ResolveRepositoryPath(Settings.LiveSavePath);
     }
 
     public string? ResolveLatestOutputPath(RecordingJob? job)

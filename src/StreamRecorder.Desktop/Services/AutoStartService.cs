@@ -1,7 +1,6 @@
 using System;
 using System.Diagnostics;
 using System.IO;
-using System.Reflection;
 using Microsoft.Win32;
 
 namespace StreamRecorder.Desktop.Services;
@@ -41,8 +40,9 @@ public sealed class AutoStartService
         {
             if (string.Equals(Path.GetFileName(processPath), "dotnet.exe", StringComparison.OrdinalIgnoreCase))
             {
-                var entryAssemblyPath = Assembly.GetEntryAssembly()?.Location;
-                if (string.IsNullOrWhiteSpace(entryAssemblyPath))
+                var entryAssemblyName = AppDomain.CurrentDomain.FriendlyName;
+                var entryAssemblyPath = Path.Combine(AppContext.BaseDirectory, entryAssemblyName);
+                if (!File.Exists(entryAssemblyPath))
                 {
                     throw new InvalidOperationException("无法确定程序入口路径，不能启用开机自启。");
                 }

@@ -904,10 +904,22 @@
                     </ScrollViewer>
 
                     <Border Grid.Column="2" Padding="18" CornerRadius="0" Background="#FFFDF7" BorderBrush="#E0D1BC" BorderThickness="1">
-                        <DockPanel>
-                            <TextBlock DockPanel.Dock="Top" Text="核心服务日志" FontSize="18" FontWeight="Bold" Foreground="#1D4654" />
-                            <ListBox Margin="0,14,0,0" ItemsSource="{Binding Logs}" BorderThickness="0" Background="Transparent" />
-                        </DockPanel>
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="*" />
+                            </Grid.RowDefinitions>
+
+                            <Grid Grid.Row="0">
+                                <TextBlock Text="核心服务日志" FontSize="18" FontWeight="Bold" Foreground="#1D4654" VerticalAlignment="Center" />
+                                <Button HorizontalAlignment="Right"
+                                        VerticalAlignment="Center"
+                                        Click="CopyLogsButton_Click"
+                                        Content="复制日志" />
+                            </Grid>
+
+                            <ListBox Grid.Row="1" Margin="0,14,0,0" ItemsSource="{Binding Logs}" BorderThickness="0" Background="Transparent" />
+                        </Grid>
                     </Border>
                 </Grid>
             </TabItem>
