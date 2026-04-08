@@ -566,8 +566,8 @@
                                     </TabControl>
 
                                 <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right">
+                                    <Button Click="SaveEditorButton_Click" Content="确定" />
                                     <Button Click="ClearEditorButton_Click" Content="取消" />
-                                    <Button Click="SaveEditorButton_Click" Content="确定保存" />
                                 </StackPanel>
                             </Grid>
                         </Border>
@@ -610,8 +610,8 @@
                                 </StackPanel>
 
                                 <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right">
-                                    <Button Click="CancelColumnOverlayButton_Click" Content="取消" />
                                     <Button Click="ApplyColumnOverlayButton_Click" Content="确定" />
+                                    <Button Click="CancelColumnOverlayButton_Click" Content="取消" />
                                 </StackPanel>
                             </Grid>
                         </Border>

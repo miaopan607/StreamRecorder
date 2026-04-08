@@ -9,6 +9,7 @@ using System.Windows.Media;
 using StreamRecorder.Desktop.Models;
 using StreamRecorder.Desktop.Services;
 using StreamRecorder.Desktop.ViewModels;
+using StreamRecorder.Desktop.Views;
 
 namespace StreamRecorder.Desktop;
 
@@ -62,7 +63,7 @@ public partial class MainWindow : global::System.Windows.Window
                 RestoreWindowVisibility();
             }
 
-            global::System.Windows.MessageBox.Show(this, ex.Message, "核心服务启动失败", global::System.Windows.MessageBoxButton.OK, global::System.Windows.MessageBoxImage.Error);
+            ShowMessageDialog("核心服务启动失败", ex.Message, MessageBoxImage.Error);
         }
     }
 
@@ -193,7 +194,7 @@ public partial class MainWindow : global::System.Windows.Window
         var job = _viewModel.SelectedJob ?? GetSelectedJobs().FirstOrDefault();
         if (job is null)
         {
-            global::System.Windows.MessageBox.Show(this, "请先选择一个任务。", "未选择任务", global::System.Windows.MessageBoxButton.OK, global::System.Windows.MessageBoxImage.Information);
+            ShowMessageDialog("未选择任务", "请先选择一个任务。", MessageBoxImage.Information);
             return;
         }
 
@@ -209,8 +210,7 @@ public partial class MainWindow : global::System.Windows.Window
             return;
         }
 
-        var answer = global::System.Windows.MessageBox.Show(this, $"确定删除选中的 {jobs.Count} 个任务吗？", "确认删除", global::System.Windows.MessageBoxButton.YesNo, global::System.Windows.MessageBoxImage.Warning);
-        if (answer != global::System.Windows.MessageBoxResult.Yes)
+        if (!ShowConfirmationDialog("确认删除", $"确定删除选中的 {jobs.Count} 个任务吗？", MessageBoxImage.Warning))
         {
             return;
         }
@@ -295,7 +295,7 @@ public partial class MainWindow : global::System.Windows.Window
         }
         catch (Exception ex)
         {
-            global::System.Windows.MessageBox.Show(this, ex.Message, "打开目录失败", global::System.Windows.MessageBoxButton.OK, global::System.Windows.MessageBoxImage.Error);
+            ShowMessageDialog("打开目录失败", ex.Message, MessageBoxImage.Error);
         }
     }
 
@@ -306,7 +306,7 @@ public partial class MainWindow : global::System.Windows.Window
             var text = string.Join(Environment.NewLine, _viewModel.Logs);
             if (string.IsNullOrWhiteSpace(text))
             {
-                global::System.Windows.MessageBox.Show(this, "当前没有可复制的日志。", "复制日志", global::System.Windows.MessageBoxButton.OK, global::System.Windows.MessageBoxImage.Information);
+                ShowMessageDialog("复制日志", "当前没有可复制的日志。", MessageBoxImage.Information);
                 return;
             }
 
@@ -314,7 +314,7 @@ public partial class MainWindow : global::System.Windows.Window
         }
         catch (Exception ex)
         {
-            global::System.Windows.MessageBox.Show(this, ex.Message, "复制日志失败", global::System.Windows.MessageBoxButton.OK, global::System.Windows.MessageBoxImage.Error);
+            ShowMessageDialog("复制日志失败", ex.Message, MessageBoxImage.Error);
         }
     }
 
@@ -326,7 +326,7 @@ public partial class MainWindow : global::System.Windows.Window
         }
         catch (Exception ex)
         {
-            global::System.Windows.MessageBox.Show(this, ex.Message, "打开目录失败", global::System.Windows.MessageBoxButton.OK, global::System.Windows.MessageBoxImage.Error);
+            ShowMessageDialog("打开目录失败", ex.Message, MessageBoxImage.Error);
         }
     }
 
@@ -337,7 +337,7 @@ public partial class MainWindow : global::System.Windows.Window
             var job = GetSelectedJobs().FirstOrDefault();
             if (string.IsNullOrWhiteSpace(_viewModel.ResolveLatestOutputPath(job)))
             {
-                global::System.Windows.MessageBox.Show(this, "当前任务还没有可播放的录制文件。", "没有可播放文件", global::System.Windows.MessageBoxButton.OK, global::System.Windows.MessageBoxImage.Information);
+                ShowMessageDialog("没有可播放文件", "当前任务还没有可播放的录制文件。", MessageBoxImage.Information);
                 return;
             }
 
@@ -345,7 +345,7 @@ public partial class MainWindow : global::System.Windows.Window
         }
         catch (Exception ex)
         {
-            global::System.Windows.MessageBox.Show(this, ex.Message, "打开文件失败", global::System.Windows.MessageBoxButton.OK, global::System.Windows.MessageBoxImage.Error);
+            ShowMessageDialog("打开文件失败", ex.Message, MessageBoxImage.Error);
         }
     }
 
@@ -415,7 +415,7 @@ public partial class MainWindow : global::System.Windows.Window
             _viewModel.SelectedJob = job;
             if (string.IsNullOrWhiteSpace(_viewModel.ResolveLatestOutputPath(job)))
             {
-                global::System.Windows.MessageBox.Show(this, "当前任务还没有可播放的录制文件。", "没有可播放文件", global::System.Windows.MessageBoxButton.OK, global::System.Windows.MessageBoxImage.Information);
+                ShowMessageDialog("没有可播放文件", "当前任务还没有可播放的录制文件。", MessageBoxImage.Information);
                 return;
             }
 
@@ -536,7 +536,7 @@ public partial class MainWindow : global::System.Windows.Window
         }
         catch (Exception ex)
         {
-            global::System.Windows.MessageBox.Show(this, ex.Message, "任务输入有误", global::System.Windows.MessageBoxButton.OK, global::System.Windows.MessageBoxImage.Warning);
+            ShowMessageDialog("任务输入有误", ex.Message, MessageBoxImage.Warning);
         }
     }
 
@@ -1050,8 +1050,18 @@ public partial class MainWindow : global::System.Windows.Window
         }
         catch (Exception ex)
         {
-            global::System.Windows.MessageBox.Show(this, ex.Message, "操作失败", global::System.Windows.MessageBoxButton.OK, global::System.Windows.MessageBoxImage.Error);
+            ShowMessageDialog("操作失败", ex.Message, MessageBoxImage.Error);
         }
+    }
+
+    private void ShowMessageDialog(string title, string message, MessageBoxImage icon)
+    {
+        AppDialogWindow.ShowMessage(this, title, message, icon);
+    }
+
+    private bool ShowConfirmationDialog(string title, string message, MessageBoxImage icon)
+    {
+        return AppDialogWindow.ShowConfirmation(this, title, message, icon);
     }
 
     private void Jobs_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
