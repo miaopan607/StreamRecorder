@@ -244,7 +244,7 @@ public sealed class CoreSettings : ObservableObject
         FlvUseDirectDownload = GetBool(element, "flv_use_direct_download");
         RecordingSpaceThreshold = GetString(element, "recording_space_threshold", "2.0");
         VideoSegmentTime = GetString(element, "video_segment_time", "1800");
-        ConvertToMp4 = GetBool(element, "convert_to_mp4", true);
+        ConvertToMp4 = GetBool(element, "convert_to_mp4");
         DeleteOriginal = GetBool(element, "delete_original");
         GenerateTimeSubtitleFile = GetBool(element, "generate_time_subtitle_file");
         ExecuteCustomScript = GetBool(element, "execute_custom_script");
