@@ -46,12 +46,14 @@ class ActiveRecording:
 
 class StreamRecorderWorkerApp:
     def __init__(self, data_root: Path) -> None:
-        self.store = WorkerConfigStore(data_root)
+        self.store = WorkerConfigStore(data_root, logger=self.log)
         self.writer = JsonLineWriter()
         self.settings = self.store.load_settings()
         self.cookies = self.store.load_cookies()
         self.accounts = self.store.load_accounts()
         self.jobs = [RecordingJob.from_dict(item) for item in self.store.load_jobs()]
+        for job in self.jobs:
+            job.reset_runtime_state()
         self.probe_service = StreamProbeService()
         self.notification_service = NotificationService()
         self.should_exit = False
@@ -83,11 +85,14 @@ class StreamRecorderWorkerApp:
         sys.stderr.write(message + "\n")
         sys.stderr.flush()
 
-    def persist(self) -> None:
-        self.store.save_settings(self.settings)
+    def persist_jobs(self) -> None:
+        self.store.save_jobs([job.to_storage_dict() for job in self.jobs])
+
+    def persist_cookies(self) -> None:
         self.store.save_cookies(self.cookies)
+
+    def persist_accounts(self) -> None:
         self.store.save_accounts(self.accounts)
-        self.store.save_jobs([job.to_dict() for job in self.jobs])
 
     async def dispatch(self, payload: dict[str, Any]) -> dict[str, Any]:
         message_id = str(payload.get("id") or "")
@@ -138,7 +143,7 @@ class StreamRecorderWorkerApp:
         for key, value in incoming_settings.items():
             if key in self.settings:
                 self.settings[key] = value
-        self.persist()
+        self.store.save_settings(self.settings)
         await self.publish_snapshot()
         return {"settings": self.settings}
 
@@ -147,13 +152,13 @@ class StreamRecorderWorkerApp:
         self.cookies = {
             str(key): str(value or "") for key, value in incoming_cookies.items()
         }
-        self.persist()
+        self.persist_cookies()
         return {"cookies": self.cookies}
 
     async def _update_accounts(self, body: dict[str, Any]) -> dict[str, Any]:
         incoming_accounts = body.get("accounts") or {}
         self.accounts = incoming_accounts if isinstance(incoming_accounts, dict) else {}
-        self.persist()
+        self.persist_accounts()
         return {"accounts": self.accounts}
 
     def _get_dependencies(self) -> dict[str, Any]:
@@ -210,7 +215,7 @@ class StreamRecorderWorkerApp:
             existing.refresh_derived_fields(existing.status_info or STATUS_MONITORING)
             changed_ids.append(existing.id)
 
-        self.persist()
+        self.persist_jobs()
         await self.publish_snapshot()
         if changed_ids:
             asyncio.create_task(self._recheck_job_ids(changed_ids, publish=True))
@@ -224,7 +229,7 @@ class StreamRecorderWorkerApp:
         before = len(self.jobs)
         self.jobs = [job for job in self.jobs if job.id not in ids]
         deleted = before - len(self.jobs)
-        self.persist()
+        self.persist_jobs()
         await self.publish_snapshot()
         return {"deleted": deleted}
 
@@ -245,7 +250,7 @@ class StreamRecorderWorkerApp:
             changed_ids.append(job.id)
             if not enabled:
                 await self._stop_recording_if_needed(job)
-        self.persist()
+        self.persist_jobs()
         await self.publish_snapshot()
         if enabled:
             asyncio.create_task(self._recheck_job_ids(changed_ids, publish=True))
@@ -273,7 +278,6 @@ class StreamRecorderWorkerApp:
         while not self.should_exit:
             await asyncio.sleep(10)
             if await self._refresh_active_recording_stats():
-                self.persist()
                 await self.publish_snapshot()
             await self.publish_health()
 
@@ -281,7 +285,6 @@ class StreamRecorderWorkerApp:
         while not self.should_exit:
             try:
                 if await self._refresh_active_recording_stats():
-                    self.persist()
                     await self.publish_snapshot()
                 await self._monitor_tick()
             except Exception as exc:  # noqa: BLE001
@@ -381,13 +384,13 @@ class StreamRecorderWorkerApp:
             return
 
         self.checking_jobs.add(job.id)
+        cookies_updated = False
         try:
             job.status_info = STATUS_CHECKING
             job.error_message = ""
             job.last_checked_at = utc_now()
             job.updated_at = utc_now()
             if publish:
-                self.persist()
                 await self.publish_snapshot()
 
             self.log(f"开始检测: {job.url}")
@@ -403,7 +406,10 @@ class StreamRecorderWorkerApp:
             )
 
             if getattr(stream_info, "new_cookies", None):
-                self.cookies[job.platform_key] = stream_info.new_cookies
+                new_cookies = str(stream_info.new_cookies)
+                if self.cookies.get(job.platform_key) != new_cookies:
+                    self.cookies[job.platform_key] = new_cookies
+                    cookies_updated = True
 
             job.streamer_name = (
                 stream_info.anchor_name or job.streamer_name or "直播间"
@@ -427,7 +433,8 @@ class StreamRecorderWorkerApp:
             self.log(f"检测失败: {job.url} | {exc}")
         finally:
             self.checking_jobs.discard(job.id)
-            self.persist()
+            if cookies_updated:
+                self.persist_cookies()
             if publish:
                 await self.publish_snapshot()
 
@@ -545,7 +552,6 @@ class StreamRecorderWorkerApp:
                 await self._notify_event(job, "error")
 
             job.updated_at = utc_now()
-            self.persist()
             await self.publish_snapshot()
         finally:
             self.active_recordings.pop(job_id, None)

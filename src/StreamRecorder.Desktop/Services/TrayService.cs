@@ -52,6 +52,7 @@ public sealed class TrayService : IDisposable
     {
         _window.ShowInTaskbar = true;
         _window.Opacity = 1;
+        _window.ShowActivated = true;
         _window.Show();
         if (_window.WindowState == global::System.Windows.WindowState.Minimized)
         {

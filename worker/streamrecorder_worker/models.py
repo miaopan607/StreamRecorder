@@ -168,14 +168,20 @@ class RecordingJob:
         )
         return job
 
-    def refresh_derived_fields(self, existing_status: str = "") -> None:
+    def refresh_derived_fields(
+        self,
+        existing_status: str = "",
+        *,
+        touch_updated_at: bool = True,
+    ) -> None:
         platform, platform_key = get_platform_info(self.url)
         if platform and platform_key:
             self.platform = platform
             self.platform_key = platform_key
         self.title = f"{self.streamer_name} - {get_quality_text(self.quality)}"
         self.display_title = self.title
-        self.updated_at = utc_now()
+        if touch_updated_at:
+            self.updated_at = utc_now()
         if existing_status:
             self.status_info = existing_status
         else:
@@ -183,8 +189,40 @@ class RecordingJob:
                 STATUS_MONITORING if self.monitor_status else STATUS_STOPPED
             )
 
+    def reset_runtime_state(self) -> None:
+        self.error_message = ""
+        self.last_checked_at = ""
+        self.live_title = ""
+        self.record_url = ""
+        self.latest_output_path = ""
+        self.duration_text = "00:00:00"
+        self.speed_text = "X KB/s"
+        self.recording_started_at = ""
+        self.refresh_derived_fields(touch_updated_at=False)
+
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
+
+    def to_storage_dict(self) -> dict[str, Any]:
+        return {
+            "id": self.id,
+            "url": self.url,
+            "streamer_name": self.streamer_name,
+            "quality": self.quality,
+            "record_format": self.record_format,
+            "segment_record": self.segment_record,
+            "segment_time": self.segment_time,
+            "monitor_status": self.monitor_status,
+            "scheduled_recording": self.scheduled_recording,
+            "scheduled_start_time": self.scheduled_start_time,
+            "monitor_hours": self.monitor_hours,
+            "recording_dir": self.recording_dir,
+            "enabled_message_push": self.enabled_message_push,
+            "only_notify_no_record": self.only_notify_no_record,
+            "flv_use_direct_download": self.flv_use_direct_download,
+            "created_at": self.created_at,
+            "updated_at": self.updated_at,
+        }
 
 
 def format_duration(elapsed: timedelta | None) -> str:

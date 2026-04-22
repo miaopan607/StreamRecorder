@@ -163,6 +163,7 @@ public partial class MainWindow : global::System.Windows.Window
     {
         Opacity = 1;
         ShowInTaskbar = true;
+        ShowActivated = true;
         if (WindowState == global::System.Windows.WindowState.Minimized)
         {
             WindowState = global::System.Windows.WindowState.Normal;
