@@ -38,13 +38,32 @@ def build_ffmpeg_command(
         "10000000",
         "-fflags",
         "+discardcorrupt+igndts",
-        "-i",
-        record_url,
-        "-sn",
-        "-dn",
-        "-map",
-        "0",
     ]
+
+    if record_url.lower().startswith(("http://", "https://")):
+        command.extend(
+            [
+                "-reconnect",
+                "1",
+                "-reconnect_at_eof",
+                "1",
+                "-reconnect_streamed",
+                "1",
+                "-reconnect_delay_max",
+                "15",
+            ]
+        )
+
+    command.extend(
+        [
+            "-i",
+            record_url,
+            "-sn",
+            "-dn",
+            "-map",
+            "0",
+        ]
+    )
 
     if proxy:
         command[1:1] = ["-http_proxy", proxy]
