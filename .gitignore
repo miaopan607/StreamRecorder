@@ -2,6 +2,12 @@
 bin/
 obj/
 
+# Tauri / frontend
+node_modules/
+target/
+dist/
+src/StreamRecorder.Tauri/src-tauri/gen/
+
 # Python
 __pycache__/
 *.pyc

@@ -1,0 +1,10 @@
+{
+  "identifier": "main",
+  "windows": ["main"],
+  "permissions": [
+    "core:event:default",
+    "core:window:allow-set-theme",
+    "dialog:allow-open",
+    "clipboard-manager:allow-write-text"
+  ]
+}
