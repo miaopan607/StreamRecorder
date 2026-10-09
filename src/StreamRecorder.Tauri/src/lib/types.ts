@@ -1,21 +1,5 @@
 export type Json =
   null | boolean | number | string | Json[] | { [key: string]: Json };
-export type WorkerMethod =
-  | "initialize"
-  | "get_snapshot"
-  | "health.ping"
-  | "settings.get"
-  | "settings.update"
-  | "cookies.get"
-  | "cookies.update"
-  | "accounts.get"
-  | "accounts.update"
-  | "dependencies.get"
-  | "jobs.upsert"
-  | "jobs.delete"
-  | "jobs.start_monitoring"
-  | "jobs.stop_monitoring"
-  | "jobs.recheck";
 export interface Job {
   id: string;
   url: string;
@@ -146,19 +130,19 @@ export interface CoreSettings {
 export interface CoreInfo {
   name: string;
   version: string;
-  python_version: string;
   ffmpeg_available: boolean;
-  node_available: boolean;
   updated_at: string;
 }
 export interface Snapshot {
+  revision: number;
   app: CoreInfo;
   settings: CoreSettings;
   jobs: Job[];
 }
-export interface WorkerState {
+export interface CoreState {
   status: "starting" | "connected" | "disconnected";
   error: string;
+  revision: number;
 }
 export interface Dependency {
   available: boolean;
@@ -171,20 +155,20 @@ export interface UiState {
   VisibleColumns: Record<string, boolean>;
 }
 export interface DesktopBootstrap {
-  snapshot: Snapshot | null;
+  snapshot: Snapshot;
   cookies: Record<string, string>;
   accounts: Record<string, Json>;
   dependencies: Record<string, Dependency>;
   ui_state: UiState;
   autostart_enabled: boolean;
-  worker_state: WorkerState;
+  core_state: CoreState;
   logs: string[];
   app_root: string;
   data_root: string;
 }
-export interface WorkerEvent {
-  name: string;
-  body: Json;
+export interface CoreEvent {
+  name: "snapshot_changed";
+  body: Snapshot;
 }
 export const defaultSettings: CoreSettings = {
   language: "Chinese",

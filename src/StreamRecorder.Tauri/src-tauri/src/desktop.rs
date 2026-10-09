@@ -1,5 +1,4 @@
 use crate::DesktopState;
-use serde_json::Value;
 use std::{path::Path, ptr::null_mut};
 use tauri::{AppHandle, Manager};
 use windows_sys::Win32::{
@@ -193,6 +192,11 @@ pub fn stop_tray(handle: usize) {
     }
 }
 pub fn notify(app: &AppHandle, title: &str, message: &str) {
+    if let Some(window) = app.get_webview_window("main") {
+        if window.is_visible().unwrap_or(false) && !window.is_minimized().unwrap_or(false) {
+            return;
+        }
+    }
     let handle = app
         .state::<DesktopState>()
         .tray
@@ -206,18 +210,6 @@ pub fn notify(app: &AppHandle, title: &str, message: &str) {
             drop(Box::from_raw(payload));
         }
     }
-}
-pub fn worker_notification(app: &AppHandle, body: &Value) {
-    if let Some(window) = app.get_webview_window("main") {
-        if window.is_visible().unwrap_or(false) && !window.is_minimized().unwrap_or(false) {
-            return;
-        }
-    }
-    notify(
-        app,
-        body["title"].as_str().unwrap_or("StreamRecorder"),
-        body["message"].as_str().unwrap_or(""),
-    );
 }
 pub fn fit_window(window: &tauri::WebviewWindow) -> Result<(), String> {
     let monitor = window
@@ -267,19 +259,7 @@ pub fn restore(app: &AppHandle) {
 }
 pub fn hide(app: &AppHandle, closing: bool) {
     let state = app.state::<DesktopState>();
-    let cache = state.worker.cache.lock();
-    let settings = &cache.snapshot["settings"];
-    let notify_enabled = settings["system_notification_enabled"]
-        .as_bool()
-        .unwrap_or(true)
-        && settings[if closing {
-            "system_close_to_tray_notification_enabled"
-        } else {
-            "system_minimize_to_tray_notification_enabled"
-        }]
-        .as_bool()
-        .unwrap_or(false);
-    drop(cache);
+    let notify_enabled = state.core.tray_notification_enabled(closing);
     if let Some(window) = app.get_webview_window("main") {
         let _ = window.hide();
         let _ = window.set_skip_taskbar(true);

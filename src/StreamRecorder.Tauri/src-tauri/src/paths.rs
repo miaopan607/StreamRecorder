@@ -2,12 +2,10 @@ use std::{
     fs,
     path::{Path, PathBuf},
 };
-include!(concat!(env!("OUT_DIR"), "/worker_assets.rs"));
 
 #[derive(Clone)]
 pub struct ProjectPaths {
     pub app_root: PathBuf,
-    pub worker_root: PathBuf,
     pub data_root: PathBuf,
 }
 impl ProjectPaths {
@@ -29,27 +27,13 @@ impl ProjectPaths {
     }
     pub fn at(app_root: PathBuf) -> Self {
         Self {
-            worker_root: app_root.join("worker"),
             data_root: app_root.join("runtime"),
             app_root,
         }
     }
-    pub fn prepare(&self, extract: bool) -> Result<(), String> {
-        let operation = || -> std::io::Result<()> {
-            fs::create_dir_all(&self.data_root)?;
-            if extract {
-                let package = self.worker_root.join("streamrecorder_worker");
-                fs::create_dir_all(&package)?;
-                for (name, bytes) in WORKER_FILES {
-                    let path = package.join(name);
-                    if fs::read(&path).ok().as_deref() != Some(*bytes) {
-                        fs::write(path, bytes)?;
-                    }
-                }
-            }
-            Ok(())
-        };
-        operation().map_err(|e| format!("无法写入应用目录，请将程序移到可写目录：{e}"))
+    pub fn prepare(&self) -> Result<(), String> {
+        fs::create_dir_all(&self.data_root)
+            .map_err(|e| format!("无法写入应用目录，请将程序移到可写目录：{e}"))
     }
     pub fn resolve(&self, text: &str) -> PathBuf {
         let expanded = if text == "~" || text.starts_with("~/") || text.starts_with("~\\") {
@@ -104,17 +88,17 @@ mod tests {
         assert!(latest_file(&recordings.join("不存在.ts")).is_none());
     }
     #[test]
-    fn extraction_keeps_user_data() {
+    fn preparing_runtime_keeps_existing_user_directories() {
         let dir = tempfile::tempdir().unwrap();
         let paths = ProjectPaths::at(dir.path().to_path_buf());
-        paths.prepare(true).unwrap();
+        let old_worker = paths.app_root.join("worker");
+        fs::create_dir_all(&old_worker).unwrap();
+        fs::write(old_worker.join("user-file.txt"), b"keep").unwrap();
+        paths.prepare().unwrap();
         let jobs = paths.data_root.join("jobs.json");
         fs::write(&jobs, b"user jobs").unwrap();
-        paths.prepare(true).unwrap();
+        paths.prepare().unwrap();
         assert_eq!(fs::read(jobs).unwrap(), b"user jobs");
-        assert!(paths
-            .worker_root
-            .join("streamrecorder_worker/app.py")
-            .is_file());
+        assert_eq!(fs::read(old_worker.join("user-file.txt")).unwrap(), b"keep");
     }
 }

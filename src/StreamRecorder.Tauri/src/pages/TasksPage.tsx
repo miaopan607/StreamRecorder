@@ -1,14 +1,17 @@
 import { useState } from "react";
 import { store, useAppState } from "../lib/store";
 import {
-  workerCall,
+  startMonitoring,
+  stopMonitoring,
+  recheckJobs,
+  deleteJobs,
   saveUiState,
   openJobFolder,
   openLatestFile,
   writeText,
 } from "../lib/desktop";
 import { qualities, selectedTargets, columns, detailText } from "../lib/jobs";
-import type { Job, WorkerMethod } from "../lib/types";
+import type { Job } from "../lib/types";
 import Modal from "../components/Modal";
 import JobEditor from "../components/JobEditor";
 export default function TasksPage() {
@@ -22,7 +25,7 @@ export default function TasksPage() {
   > | null>(null);
   const [deleting, setDeleting] = useState<Job[] | null>(null);
   const [busy, setBusy] = useState<Set<string>>(() => new Set());
-  const connected = state.worker.status === "connected";
+  const connected = state.core.status === "connected";
   const targets = selectedTargets(jobs, state.selected, state.active, true);
   const deleteTargets = selectedTargets(
     jobs,
@@ -45,11 +48,9 @@ export default function TasksPage() {
       });
     }
   }
-  async function command(method: WorkerMethod, targets: Job[], key = "batch") {
+  async function command(run: (ids: string[]) => Promise<unknown>, targets: Job[], key = "batch") {
     if (targets.length)
-      await action(key, () =>
-        workerCall(method, { ids: targets.map((job) => job.id) }),
-      );
+      await action(key, () => run(targets.map((job) => job.id)));
   }
   async function layout() {
     const ui = { ...state.ui, IsCardLayout: !state.ui.IsCardLayout };
@@ -92,7 +93,7 @@ export default function TasksPage() {
         <button onClick={() => setDetails(job)}>详情</button>
         <button
           disabled={disabled}
-          onClick={() => void command("jobs.recheck", [job], job.id)}
+          onClick={() => void command(recheckJobs, [job], job.id)}
         >
           重检
         </button>
@@ -100,9 +101,7 @@ export default function TasksPage() {
           disabled={disabled}
           onClick={() =>
             void command(
-              job.monitor_status
-                ? "jobs.stop_monitoring"
-                : "jobs.start_monitoring",
+              job.monitor_status ? stopMonitoring : startMonitoring,
               [job],
               job.id,
             )
@@ -200,19 +199,19 @@ export default function TasksPage() {
         <div className="inline-actions">
           <button
             disabled={!connected || !jobs.length || busy.has("batch")}
-            onClick={() => void command("jobs.start_monitoring", targets)}
+            onClick={() => void command(startMonitoring, targets)}
           >
             开始监控
           </button>
           <button
             disabled={!connected || !jobs.length || busy.has("batch")}
-            onClick={() => void command("jobs.stop_monitoring", targets)}
+            onClick={() => void command(stopMonitoring, targets)}
           >
             停止监控
           </button>
           <button
             disabled={!connected || !jobs.length || busy.has("batch")}
-            onClick={() => void command("jobs.recheck", targets)}
+            onClick={() => void command(recheckJobs, targets)}
           >
             立即重检
           </button>
@@ -232,7 +231,7 @@ export default function TasksPage() {
           <p>
             {connected
               ? "添加一个直播间，录制会在开播后自动开始。"
-              : "请到诊断页面检查 Python 和核心服务运行环境。"}
+              : "请到诊断页面检查核心服务运行状态。"}
           </p>
           {connected && (
             <button className="primary" onClick={() => setEditor(null)}>
@@ -413,9 +412,7 @@ export default function TasksPage() {
               disabled={busy.has("batch")}
               onClick={() =>
                 void action("batch", async () => {
-                  await workerCall("jobs.delete", {
-                    ids: deleting.map((job) => job.id),
-                  });
+                  await deleteJobs(deleting.map((job) => job.id));
                   setDeleting(null);
                 })
               }

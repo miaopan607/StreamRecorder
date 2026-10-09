@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { store, useAppState } from "../lib/store";
 import {
-  workerCall,
+  pingCore,
   refreshDependencies,
   openDataFolder,
   writeText,
@@ -21,12 +21,7 @@ export default function DiagnosticsPage() {
       setBusy("");
     }
   }
-  const labels: Record<string, string> = {
-    python: "Python",
-    streamget: "StreamGet",
-    ffmpeg: "FFmpeg",
-    node: "Node.js",
-  };
+  const labels: Record<string, string> = { ffmpeg: "FFmpeg" };
   return (
     <section>
       <header className="page-header">
@@ -39,20 +34,18 @@ export default function DiagnosticsPage() {
         <aside className="diagnostic-info">
           <h2>核心服务</h2>
           <p>
-            {state.worker.status === "connected"
-              ? "已连接"
-              : state.worker.status === "starting"
-                ? "正在启动"
-                : "未连接"}
+            {state.core.status === "connected"
+              ? "已就绪"
+              : state.core.status === "starting"
+                ? "正在启动核心服务"
+                : "核心服务不可用"}
           </p>
-          {state.worker.error && (
-            <p className="error-inline">{state.worker.error}</p>
+          {state.core.error && (
+            <p className="error-inline">{state.core.error}</p>
           )}
           {state.snapshot && (
             <p className="path-info">
-              核心 {state.snapshot.app.version}
-              <br />
-              Python {state.snapshot.app.python_version}
+              核心 {state.snapshot.app.version} · Rust
             </p>
           )}
           <ul className="dependency-list">
@@ -77,28 +70,16 @@ export default function DiagnosticsPage() {
                   {dependency && !dependency.available && dependency.error && (
                     <small className="job-error">{dependency.error}</small>
                   )}
-                  {key === "node" && (
-                    <small>仅部分直播平台需要 Node.js。</small>
-                  )}
-                  {key === "streamget" &&
-                    dependency &&
-                    !dependency.available && (
-                      <small>
-                        安装命令：python -m pip install streamget==4.0.10
-                      </small>
-                    )}
                 </li>
               );
             })}
           </ul>
           <div className="inline-actions">
             <button
-              disabled={state.worker.status !== "connected" || busy === "ping"}
+              disabled={state.core.status !== "connected" || busy === "ping"}
               onClick={() =>
                 void action("ping", async () => {
-                  const result = await workerCall<{ utc: string }>(
-                    "health.ping",
-                  );
+                  const result = await pingCore();
                   setNotice(`核心服务响应正常：${result.utc}`);
                 })
               }

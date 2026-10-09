@@ -28,14 +28,13 @@ afterEach(() => {
   vi.clearAllTimers();
   vi.useRealTimers();
 });
-function snapshot(jobs: Job[]): Snapshot {
+function snapshot(jobs: Job[], revision = 1): Snapshot {
   return {
+    revision,
     app: {
       name: "核心",
       version: "1",
-      python_version: "3",
       ffmpeg_available: true,
-      node_available: true,
       updated_at: "",
     },
     settings: { ...defaultSettings },
@@ -79,11 +78,11 @@ describe("批量目标与快照", () => {
     app.applySnapshot(snapshot([job("a"), job("b")]));
     app.update({ active: "b", selected: new Set(["a", "b"]) });
     app.draft.set("custom_filename_template", "用户输入");
-    app.applySnapshot(snapshot([job("b")]));
+    app.applySnapshot(snapshot([job("b")], 2));
     expect([...app.state.selected]).toEqual(["b"]);
     expect(app.state.active).toBe("b");
     expect(app.state.settings.custom_filename_template).toBe("用户输入");
-    app.applySnapshot(snapshot([]));
+    app.applySnapshot(snapshot([], 3));
     expect(app.state.active).toBeNull();
     expect([...app.state.selected]).toEqual([]);
   });

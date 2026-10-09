@@ -14,7 +14,7 @@ export default function SettingsPage() {
   const [tab, setTab] = useState("recording");
   const [showSecrets, setShowSecrets] = useState(false);
   const [starting, setStarting] = useState(false);
-  const connected = state.worker.status === "connected";
+  const connected = state.core.status === "connected";
   function sections(groups: SettingSection[]) {
     return groups.map((group) => (
       <section className="setting-section" key={group.title}>

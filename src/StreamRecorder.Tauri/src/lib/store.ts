@@ -1,13 +1,13 @@
 import { useSyncExternalStore } from "react";
-import { bootstrap, listen, workerCall } from "./desktop";
+import { bootstrap, listen, updateSettings } from "./desktop";
 import {
   defaultSettings,
   type CoreSettings,
   type DesktopBootstrap,
   type Snapshot,
   type UiState,
-  type WorkerEvent,
-  type WorkerState,
+  type CoreEvent,
+  type CoreState,
 } from "./types";
 
 // 配置草稿独立于快照，回填只覆盖没有本地修改的字段。
@@ -83,7 +83,7 @@ export interface AppState {
   loaded: boolean;
   snapshot: Snapshot | null;
   settings: CoreSettings;
-  worker: WorkerState;
+  core: CoreState;
   cookies: DesktopBootstrap["cookies"];
   accounts: DesktopBootstrap["accounts"];
   dependencies: DesktopBootstrap["dependencies"];
@@ -104,7 +104,7 @@ export class AppStore {
     loaded: false,
     snapshot: null,
     settings: { ...defaultSettings },
-    worker: { status: "starting", error: "" },
+    core: { status: "starting", error: "", revision: -1 },
     cookies: {},
     accounts: {},
     dependencies: {},
@@ -124,12 +124,7 @@ export class AppStore {
   private initialization: Promise<void> | undefined;
   readonly draft = new SettingsDraft(
     defaultSettings,
-    async (settings) =>
-      (
-        await workerCall<{ settings: CoreSettings }>("settings.update", {
-          settings,
-        })
-      ).settings,
+    async (settings) => (await updateSettings(settings)).settings,
     () => this.publishDraft(),
   );
   subscribe = (fn: () => void) => {
@@ -152,6 +147,7 @@ export class AppStore {
     });
   }
   applySnapshot(snapshot: Snapshot) {
+    if (snapshot.revision <= (this.state.snapshot?.revision ?? -1)) return;
     const ids = new Set(snapshot.jobs.map((job) => job.id));
     this.update({
       snapshot,
@@ -163,27 +159,27 @@ export class AppStore {
     });
     this.draft.apply(snapshot.settings);
   }
-  event(event: WorkerEvent) {
-    if (event.name === "snapshot_changed")
-      this.applySnapshot(event.body as unknown as Snapshot);
-    if (event.name === "core_health" && this.state.snapshot)
-      this.update({
-        snapshot: {
-          ...this.state.snapshot,
-          app: event.body as unknown as Snapshot["app"],
-        },
-      });
+  applyCore(core: CoreState) {
+    if (core.revision <= this.state.core.revision) return;
+    this.update({ core });
   }
   initialize() {
-    return (this.initialization ??= (async () => {
+    if (this.initialization) return this.initialization;
+    this.initialization = Promise.resolve().then(async () => {
       const queued: Array<() => void> = [];
+      const unlisten: Array<() => void> = [];
       let buffering = true;
-      const deliver = (fn: () => void) => (buffering ? queued.push(fn) : fn());
+      let active = true;
+      const deliver = (fn: () => void) => {
+        if (!active) return;
+        if (buffering) queued.push(fn);
+        else fn();
+      };
       try {
-        await listen<WorkerEvent>("worker-event", (event) =>
-          deliver(() => this.event(event.payload)),
-        );
-        await listen<string>("worker-log", (event) => {
+        unlisten.push(await listen<CoreEvent>("core-event", (event) =>
+          deliver(() => this.applySnapshot(event.payload.body)),
+        ));
+        unlisten.push(await listen<string>("core-log", (event) => {
           const buffered = buffering;
           deliver(() => {
             if (!buffered || !this.state.logs.includes(event.payload))
@@ -191,35 +187,39 @@ export class AppStore {
                 logs: [event.payload, ...this.state.logs].slice(0, 300),
               });
           });
-        });
-        await listen<WorkerState>("worker-state", (event) =>
-          deliver(() => this.update({ worker: event.payload })),
-        );
+        }));
+        unlisten.push(await listen<CoreState>("core-state", (event) =>
+          deliver(() => this.applyCore(event.payload)),
+        ));
         const data = await bootstrap();
         this.update({
           loaded: true,
+          error: "",
           cookies: data.cookies,
           accounts: data.accounts,
           dependencies: data.dependencies,
           ui: data.ui_state,
           autostart: data.autostart_enabled,
-          worker: data.worker_state,
           logs: data.logs,
           appRoot: data.app_root,
           dataRoot: data.data_root,
         });
-        if (data.snapshot) this.applySnapshot(data.snapshot);
+        this.applyCore(data.core_state);
+        this.applySnapshot(data.snapshot);
+        buffering = false;
+        for (const fn of queued) fn();
       } catch (error) {
+        active = false;
+        for (const stop of unlisten) stop();
+        this.initialization = undefined;
         this.update({
           loaded: true,
           error: String(error),
-          worker: { status: "disconnected", error: String(error) },
+          core: { ...this.state.core, status: "disconnected", error: String(error) },
         });
-      } finally {
-        buffering = false;
-        for (const fn of queued) fn();
       }
-    })());
+    });
+    return this.initialization;
   }
   select(id: string, checked: boolean) {
     const selected = new Set(this.state.selected);

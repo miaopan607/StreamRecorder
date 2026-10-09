@@ -19,14 +19,14 @@ import {
 const remote = vi.hoisted(() => ({ call: vi.fn() }));
 vi.mock("../lib/desktop", async (original) => ({
   ...(await original<typeof DesktopApi>()),
-  workerCall: remote.call,
+  startMonitoring: remote.call,
 }));
 it("任务乙请求完成不会解锁仍在执行的任务甲", async () => {
   const initial = store.state;
   const responses = new Map<string, (value: Json) => void>();
   remote.call.mockImplementation(
-    (_method: string, body: { ids: string[] }) =>
-      new Promise<Json>((resolve) => responses.set(body.ids[0], resolve)),
+    (ids: string[]) =>
+      new Promise<Json>((resolve) => responses.set(ids[0], resolve)),
   );
   const jobs: Job[] = ["甲", "乙"].map((id) => ({
     ...newJob(defaultSettings),
@@ -49,12 +49,11 @@ it("任务乙请求完成不会解锁仍在执行的任务甲", async () => {
     recording_started_at: "",
   }));
   const snapshot: Snapshot = {
+    revision: 1,
     app: {
       name: "核心",
       version: "1",
-      python_version: "3",
       ffmpeg_available: true,
-      node_available: true,
       updated_at: "",
     },
     settings: { ...defaultSettings },
@@ -62,7 +61,7 @@ it("任务乙请求完成不会解锁仍在执行的任务甲", async () => {
   };
   store.update({
     loaded: true,
-    worker: { status: "connected", error: "" },
+    core: { status: "connected", error: "", revision: 1 },
     snapshot,
     ui: { IsCardLayout: true, VisibleColumns: {} },
   });

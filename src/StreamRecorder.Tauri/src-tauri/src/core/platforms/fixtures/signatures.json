@@ -1,0 +1,13 @@
+{
+  "douyin": {
+    "query": "aid=6383&web_rid=10001",
+    "user_agent": "Mozilla/5.0 Test",
+    "timestamp": 1760000000123,
+    "signature": "E7mhBmg6mEVNgf6X56nLfY3q6AP3YW0l0HViMD2fQnVl0L39HMTa9exo1HUvewjji4/sIeYjy4hbO3xprQAjM36UHWwEUdQ2mgWkKl5Q5I0j53iruyRDntmF4vj3SFlm5XNAEOk0y75rKb70Woqe-vIlO62-zo0/9-Y="
+  },
+  "rc4": {
+    "plaintext": "Plaintext",
+    "key": "Key",
+    "hex": "bbf316e8d940af0ad3"
+  }
+}

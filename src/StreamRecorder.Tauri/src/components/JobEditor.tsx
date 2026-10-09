@@ -1,7 +1,7 @@
 import { useState } from "react";
 import Modal from "./Modal";
 import Field from "./Field";
-import { selectFolder, workerCall } from "../lib/desktop";
+import { selectFolder, upsertJobs } from "../lib/desktop";
 import { formats, qualities, newJob, jobDraft, parseBatch } from "../lib/jobs";
 import { useAppState } from "../lib/store";
 import type { Job, JobDraft } from "../lib/types";
@@ -51,7 +51,7 @@ export default function JobEditor({
     }
     setSaving(true);
     try {
-      await workerCall("jobs.upsert", { jobs });
+      await upsertJobs(jobs);
       onClose();
     } catch (e) {
       setError(String(e));
@@ -233,7 +233,7 @@ export default function JobEditor({
           <button
             type="submit"
             className="primary"
-            disabled={saving || state.worker.status !== "connected"}
+            disabled={saving || state.core.status !== "connected"}
           >
             {saving ? "正在提交…" : "确定"}
           </button>

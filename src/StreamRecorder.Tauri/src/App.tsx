@@ -110,19 +110,19 @@ export default function App() {
       </main>
       <footer className="status-bar">
         <span className="status-connection">
-          <i className={`connection-dot ${state.worker.status}`} />
-          {state.worker.status === "connected"
-            ? "已连接"
-            : state.worker.status === "starting"
+          <i className={`connection-dot ${state.core.status}`} />
+          {state.core.status === "connected"
+            ? "已就绪"
+            : state.core.status === "starting"
               ? "正在启动核心服务"
-              : "未连接"}
+              : "核心服务不可用"}
         </span>
         <span>{jobs.length} 个任务</span>
         <span>{jobs.filter((job) => job.monitor_status).length} 个监控中</span>
         <span className="status-right">
           {state.snapshot
-            ? `核心 ${state.snapshot.app.version} · Python ${state.snapshot.app.python_version}`
-            : "Python 核心服务"}
+            ? `核心 ${state.snapshot.app.version} · Rust`
+            : "原生核心服务"}
         </span>
       </footer>
       {exitFailed && (

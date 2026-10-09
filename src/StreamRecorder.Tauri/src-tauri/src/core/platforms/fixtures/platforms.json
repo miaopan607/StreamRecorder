@@ -1,0 +1,725 @@
+[
+  {
+    "platform": "lang",
+    "url": "https://www.lang.live/10001",
+    "live": [
+      {
+        "path": "/langweb/v1/room/liveinfo",
+        "body": "{\"data\":{\"live_info\":{\"nickname\":\"主播\",\"live_status\":1,\"liveurl\":\"https://media.example/live.flv\",\"liveurl_hls\":\"https://media.example/master.m3u8\"}}}"
+      }
+    ],
+    "offline": [
+      {
+        "path": "/langweb/v1/room/liveinfo",
+        "body": "{\"data\":{\"live_info\":{\"nickname\":\"主播\",\"live_status\":0}}}"
+      }
+    ],
+    "expected_live": {
+      "is_live": true,
+      "anchor_name": "主播",
+      "flv_url": "https://media.example/live.flv",
+      "record_url": "https://media.example/master.m3u8"
+    },
+    "expected_offline": {
+      "is_live": false,
+      "anchor_name": "主播"
+    }
+  },
+  {
+    "platform": "lianjie",
+    "url": "https://www.lailianjie.com/10001",
+    "live": [
+      {
+        "path": "/ApiServices/service/live/getRoomInfo",
+        "body": "{\"data\":{\"nickname\":\"主播\",\"isonline\":1,\"defaultRoomTitle\":\"标题\",\"videoUrl\":\"https://media.example/live.flv\"}}"
+      }
+    ],
+    "offline": [
+      {
+        "path": "/ApiServices/service/live/getRoomInfo",
+        "body": "{\"data\":{\"nickname\":\"主播\",\"isonline\":0}}"
+      }
+    ],
+    "expected_live": {
+      "is_live": true,
+      "anchor_name": "主播",
+      "title": "标题",
+      "record_url": "https://media.example/live.flv"
+    },
+    "expected_offline": {
+      "is_live": false,
+      "anchor_name": "主播"
+    }
+  },
+  {
+    "platform": "maoerfm",
+    "url": "https://fm.missevan.com/10001",
+    "live": [
+      {
+        "path": "/api/v2/live/10001",
+        "body": "{\"info\":{\"creator\":{\"username\":\"主播\"},\"room\":{\"status\":{\"broadcasting\":true},\"name\":\"标题\",\"channel\":{\"hls_pull_url\":\"https://media.example/master.m3u8\",\"flv_pull_url\":\"https://media.example/live.flv\"}}}}"
+      }
+    ],
+    "offline": [
+      {
+        "path": "/api/v2/live/10001",
+        "body": "{\"info\":{\"creator\":{\"username\":\"主播\"}}}"
+      }
+    ],
+    "expected_live": {
+      "is_live": true,
+      "anchor_name": "主播",
+      "title": "标题",
+      "record_url": "https://media.example/live.flv"
+    },
+    "expected_offline": {
+      "is_live": false,
+      "anchor_name": "主播"
+    }
+  },
+  {
+    "platform": "picarto",
+    "url": "https://picarto.tv/user",
+    "live": [
+      {
+        "path": "/api/channel/detail/user",
+        "body": "{\"channel\":{\"name\":\"user\",\"online\":true,\"title\":\"标题\"}}"
+      }
+    ],
+    "offline": [
+      {
+        "path": "/api/channel/detail/user",
+        "body": "{\"channel\":{\"name\":\"user\",\"online\":false}}"
+      }
+    ],
+    "expected_live": {
+      "is_live": true,
+      "anchor_name": "user",
+      "title": "标题",
+      "record_url": "https://1-edge1-us-newyork.picarto.tv/stream/hls/golive+user/index.m3u8"
+    },
+    "expected_offline": {
+      "is_live": false,
+      "anchor_name": "user"
+    }
+  },
+  {
+    "platform": "blued",
+    "url": "https://app.blued.cn/10001",
+    "live": [
+      {
+        "path": "/10001",
+        "body": "decodeURIComponent(\"%7B%22userInfo%22%3A%20%7B%22name%22%3A%20%22%E4%B8%BB%E6%92%AD%22%2C%20%22onLive%22%3A%20true%7D%2C%20%22liveInfo%22%3A%20%7B%22liveUrl%22%3A%20%22https%3A%2F%2Fmedia.example%2Fmaster.m3u8%22%7D%7D\")),window.Promise"
+      }
+    ],
+    "offline": [
+      {
+        "path": "/10001",
+        "body": "decodeURIComponent(\"%7B%22userInfo%22%3A%20%7B%22name%22%3A%20%22%E4%B8%BB%E6%92%AD%22%2C%20%22onLive%22%3A%20false%7D%7D\")),window.Promise"
+      }
+    ],
+    "expected_live": {
+      "is_live": true,
+      "anchor_name": "主播",
+      "record_url": "https://media.example/master.m3u8"
+    },
+    "expected_offline": {
+      "is_live": false,
+      "anchor_name": "主播"
+    }
+  },
+  {
+    "platform": "chzzk",
+    "url": "https://chzzk.naver.com/live/10001",
+    "live": [
+      {
+        "path": "/service/v3/channels/10001/live-detail",
+        "body": "{\"content\":{\"channel\":{\"channelName\":\"主播\"},\"status\":\"OPEN\",\"livePlaybackJson\":\"{\\\"media\\\": [{\\\"path\\\": \\\"https://media.example/master.m3u8\\\"}]}\"}}"
+      },
+      {
+        "path": "/master.m3u8",
+        "body": "#EXTM3U\n#EXT-X-STREAM-INF:BANDWIDTH=9000000,RESOLUTION=1920x1080\nhttps://media.example/high.m3u8\n#EXT-X-STREAM-INF:BANDWIDTH=1000000,RESOLUTION=640x360\nhttps://media.example/low.m3u8\n"
+      }
+    ],
+    "offline": [
+      {
+        "path": "/service/v3/channels/10001/live-detail",
+        "body": "{\"content\":{\"channel\":{\"channelName\":\"主播\"},\"status\":\"CLOSE\",\"livePlaybackJson\":\"{\\\"media\\\": [{\\\"path\\\": \\\"https://media.example/master.m3u8\\\"}]}\"}}"
+      }
+    ],
+    "expected_live": {
+      "is_live": true,
+      "anchor_name": "主播",
+      "m3u8_url": "https://media.example/master.m3u8",
+      "record_url": "https://media.example/high.m3u8"
+    },
+    "expected_offline": {
+      "is_live": false,
+      "anchor_name": "主播"
+    },
+    "expected_ld": {
+      "is_live": true,
+      "anchor_name": "主播",
+      "m3u8_url": "https://media.example/master.m3u8",
+      "record_url": "https://media.example/low.m3u8"
+    }
+  },
+  {
+    "platform": "qiandurebo",
+    "url": "https://www.qiandurebo.com/10001",
+    "live": [
+      {
+        "path": "/10001",
+        "body": "var user = {\"zb_nickname\": \"主播\",\r\n\"play_url\": \"https://media.example/live.flv\",\r\n}\r\n user.play_url"
+      }
+    ],
+    "offline": [
+      {
+        "path": "/10001",
+        "body": "var user = {\"zb_nickname\": \"主播\",\r\n\"play_url\": \"https://media.example/live.flv\",\r\n}\r\n user.play_urlcommon-text-center\" style=\"display:block"
+      }
+    ],
+    "expected_live": {
+      "is_live": true,
+      "anchor_name": "主播",
+      "record_url": "https://media.example/live.flv"
+    },
+    "expected_offline": {
+      "is_live": false,
+      "anchor_name": "主播"
+    }
+  },
+  {
+    "platform": "17live",
+    "url": "https://17.live/10001",
+    "live": [
+      {
+        "path": "/10001",
+        "body": "var user = {\"zb_nickname\": \"主播\",\r\n\"play_url\": \"https://media.example/live.flv\",\r\n}\r\n user.play_url"
+      }
+    ],
+    "offline": [
+      {
+        "path": "/10001",
+        "body": "var user = {\"zb_nickname\": \"主播\",\r\n\"play_url\": \"https://media.example/live.flv\",\r\n}\r\n user.play_urlcommon-text-center\" style=\"display:block"
+      }
+    ],
+    "expected_live": {
+      "is_live": true,
+      "anchor_name": "主播",
+      "record_url": "https://media.example/live.flv"
+    },
+    "expected_offline": {
+      "is_live": false,
+      "anchor_name": "主播"
+    }
+  },
+  {
+    "platform": "bigo",
+    "url": "https://www.bigo.tv/10001",
+    "live": [
+      {
+        "path": "/official_website/studio/getInternalStudioInfo",
+        "body": "{\"data\":{\"nick_name\":\"主播\",\"alive\":1,\"roomTopic\":\"标题\",\"hls_src\":\"https://media.example/master.m3u8\"}}"
+      }
+    ],
+    "offline": [
+      {
+        "path": "/official_website/studio/getInternalStudioInfo",
+        "body": "{\"data\":{\"nick_name\":\"主播\",\"alive\":0}}"
+      }
+    ],
+    "expected_live": {
+      "is_live": true,
+      "anchor_name": "主播",
+      "title": "标题",
+      "record_url": "https://media.example/master.m3u8"
+    },
+    "expected_offline": {
+      "is_live": false,
+      "anchor_name": "主播"
+    }
+  },
+  {
+    "platform": "weibo",
+    "url": "https://weibo.com/show/10001",
+    "live": [
+      {
+        "path": "/l/pc/anchor/live",
+        "body": "{\"data\":{\"user_info\":{\"name\":\"主播\"},\"item\":{\"status\":1,\"desc\":\"标题\",\"stream_info\":{\"pull\":{\"live_origin_hls_url\":\"https://media.example/live_origin.m3u8\",\"live_origin_flv_url\":\"https://media.example/live_origin.flv\"}}}}}"
+      }
+    ],
+    "offline": [
+      {
+        "path": "/l/pc/anchor/live",
+        "body": "{\"data\":{\"user_info\":{\"name\":\"主播\"},\"item\":{\"status\":0,\"desc\":\"标题\",\"stream_info\":{\"pull\":{\"live_origin_hls_url\":\"https://media.example/live_origin.m3u8\",\"live_origin_flv_url\":\"https://media.example/live_origin.flv\"}}}}}"
+      }
+    ],
+    "expected_live": {
+      "is_live": true,
+      "anchor_name": "主播",
+      "title": "标题",
+      "record_url": "https://media.example/live_origin.m3u8"
+    },
+    "expected_offline": {
+      "is_live": false,
+      "anchor_name": "主播"
+    },
+    "expected_ld": {
+      "is_live": true,
+      "anchor_name": "主播",
+      "title": "标题",
+      "record_url": "https://media.example/live.m3u8"
+    }
+  },
+  {
+    "platform": "inke",
+    "url": "https://inke.cn/share?uid=10001&id=1",
+    "live": [
+      {
+        "path": "/web/live_share_pc",
+        "body": "{\"data\":{\"media_info\":{\"nick\":\"主播\"},\"status\":1,\"live_addr\":[{\"hls_stream_addr\":\"https://media.example/master.m3u8\",\"stream_addr\":\"https://media.example/live.flv\"}]}}"
+      }
+    ],
+    "offline": [
+      {
+        "path": "/web/live_share_pc",
+        "body": "{\"data\":{\"media_info\":{\"nick\":\"主播\"},\"status\":0}}"
+      }
+    ],
+    "expected_live": {
+      "is_live": true,
+      "anchor_name": "主播",
+      "record_url": "https://media.example/master.m3u8"
+    },
+    "expected_offline": {
+      "is_live": false,
+      "anchor_name": "主播"
+    }
+  },
+  {
+    "platform": "changliao",
+    "url": "https://wap.tlclw.com/10001",
+    "live": [
+      {
+        "path": "/api/ui/room/v1.0.0/live.ashx",
+        "body": "{\"data\":{\"roomInfo\":{\"nickname\":\"主播\",\"live_stat\":1,\"liveID\":\"live\"}}}"
+      },
+      {
+        "path": "/10001",
+        "body": "var config = {\"domainpullstream_flv\": \"https://media.example\", \"domainpullstream_hls\": \"https://media.example\"}; config.webskins"
+      }
+    ],
+    "offline": [
+      {
+        "path": "/api/ui/room/v1.0.0/live.ashx",
+        "body": "{\"data\":{\"roomInfo\":{\"nickname\":\"主播\",\"live_stat\":0}}}"
+      }
+    ],
+    "expected_live": {
+      "is_live": true,
+      "anchor_name": "主播",
+      "record_url": "https://media.example/live.flv"
+    },
+    "expected_offline": {
+      "is_live": false,
+      "anchor_name": "主播"
+    }
+  },
+  {
+    "platform": "yinbo",
+    "url": "https://wap.ybw1666.com/10001",
+    "live": [
+      {
+        "path": "/api/ui/room/v1.0.0/live.ashx",
+        "body": "{\"data\":{\"roomInfo\":{\"nickname\":\"主播\",\"live_stat\":1,\"liveID\":\"live\"}}}"
+      },
+      {
+        "path": "/10001",
+        "body": "var config = {\"domainpullstream_flv\": \"https://media.example\", \"domainpullstream_hls\": \"https://media.example\"}; config.webskins"
+      }
+    ],
+    "offline": [
+      {
+        "path": "/api/ui/room/v1.0.0/live.ashx",
+        "body": "{\"data\":{\"roomInfo\":{\"nickname\":\"主播\",\"live_stat\":0}}}"
+      }
+    ],
+    "expected_live": {
+      "is_live": true,
+      "anchor_name": "主播",
+      "record_url": "https://media.example/live.flv"
+    },
+    "expected_offline": {
+      "is_live": false,
+      "anchor_name": "主播"
+    }
+  },
+  {
+    "platform": "netease",
+    "url": "https://cc.163.com/10001",
+    "live": [
+      {
+        "path": "/10001/",
+        "body": "<script id=\"__NEXT_DATA__\" type=\"application/json\" crossorigin=\"anonymous\">{\"props\": {\"pageProps\": {\"roomInfoInitData\": {\"live\": {\"status\": 1, \"nickname\": \"主播\", \"title\": \"标题\", \"sharefile\": \"https://media.example/master.m3u8\", \"quickplay\": {\"resolution\": {\"blueray\": {\"cdn\": {\"first\": \"https://media.example/high.flv\"}}, \"standard\": {\"cdn\": {\"first\": \"https://media.example/low.flv\"}}}}}}}}}</script></body>"
+      }
+    ],
+    "offline": [
+      {
+        "path": "/10001/",
+        "body": "<script id=\"__NEXT_DATA__\" type=\"application/json\" crossorigin=\"anonymous\">{\"props\": {\"pageProps\": {\"roomInfoInitData\": {\"live\": {\"status\": 0, \"nickname\": \"主播\", \"title\": \"标题\", \"sharefile\": \"https://media.example/master.m3u8\", \"quickplay\": {\"resolution\": {\"blueray\": {\"cdn\": {\"first\": \"https://media.example/high.flv\"}}, \"standard\": {\"cdn\": {\"first\": \"https://media.example/low.flv\"}}}}}}}}}</script></body>"
+      }
+    ],
+    "expected_live": {
+      "is_live": true,
+      "anchor_name": "主播",
+      "title": "标题",
+      "record_url": "https://media.example/high.flv"
+    },
+    "expected_offline": {
+      "is_live": false,
+      "anchor_name": "主播"
+    },
+    "expected_ld": {
+      "is_live": true,
+      "anchor_name": "主播",
+      "title": "标题",
+      "record_url": "https://media.example/low.flv"
+    }
+  },
+  {
+    "platform": "kugou",
+    "url": "https://fanxing.kugou.com/10001",
+    "live": [
+      {
+        "path": "/roomcen/room/web/cdn/getEnterRoomInfo",
+        "body": "{\"data\":{\"normalRoomInfo\":{\"nickName\":\"主播\"},\"liveType\":1}}"
+      },
+      {
+        "path": "/video/pc/live/pull/mutiline/streamaddr",
+        "body": "{\"data\":{\"lines\":[{\"streamProfiles\":[{\"httpsFlv\":[\"https://media.example/live.flv\"]}]}]}}"
+      }
+    ],
+    "offline": [
+      {
+        "path": "/roomcen/room/web/cdn/getEnterRoomInfo",
+        "body": "{\"data\":{\"normalRoomInfo\":{\"nickName\":\"主播\"},\"liveType\":-1}}"
+      }
+    ],
+    "expected_live": {
+      "is_live": true,
+      "anchor_name": "主播",
+      "record_url": "https://media.example/live.flv"
+    },
+    "expected_offline": {
+      "is_live": false,
+      "anchor_name": "主播"
+    }
+  },
+  {
+    "platform": "vvxq",
+    "url": "https://h5webcdn-pro.vvxqiu.com/?roomId=10001",
+    "live": [
+      {
+        "path": "/room/video/getRoomData.do",
+        "body": "{\"nickName\":\"主播\",\"status\":100,\"videoUrl\":\"https://media.example/master.m3u8\"}"
+      }
+    ],
+    "offline": [
+      {
+        "path": "/room/video/getRoomData.do",
+        "body": "{\"status\":0}"
+      },
+      {
+        "path": "/activity-center/fanclub/activity/captain/banner",
+        "body": "{\"data\":{\"anchorName\":\"主播\"}}"
+      }
+    ],
+    "expected_live": {
+      "is_live": true,
+      "anchor_name": "主播",
+      "record_url": "https://media.example/master.m3u8"
+    },
+    "expected_offline": {
+      "is_live": false,
+      "anchor_name": "主播"
+    }
+  },
+  {
+    "platform": "zhihu",
+    "url": "https://www.zhihu.com/theater/10001",
+    "live": [
+      {
+        "path": "/theater/10001",
+        "body": "<script id=\"js-initialData\" type=\"text/json\">{\"initialState\": {\"theater\": {\"theaters\": {\"10001\": {\"actor\": {\"name\": \"主播\"}, \"drama\": {\"status\": 1, \"playInfo\": {\"hlsUrl\": \"https://media.example/master.m3u8\", \"playUrl\": \"https://media.example/live.flv\"}}, \"theme\": \"标题\"}}}}}</script>"
+      }
+    ],
+    "offline": [
+      {
+        "path": "/theater/10001",
+        "body": "<script id=\"js-initialData\" type=\"text/json\">{\"initialState\": {\"theater\": {\"theaters\": {\"10001\": {\"actor\": {\"name\": \"主播\"}, \"drama\": {\"status\": 0, \"playInfo\": {\"hlsUrl\": \"https://media.example/master.m3u8\", \"playUrl\": \"https://media.example/live.flv\"}}, \"theme\": \"标题\"}}}}}</script>"
+      }
+    ],
+    "expected_live": {
+      "is_live": true,
+      "anchor_name": "主播",
+      "title": "标题",
+      "record_url": "https://media.example/master.m3u8"
+    },
+    "expected_offline": {
+      "is_live": false,
+      "anchor_name": "主播"
+    }
+  },
+  {
+    "platform": "showroom",
+    "url": "https://www.showroom-live.com/room/profile?room_id=10001",
+    "live": [
+      {
+        "path": "/api/live/live_info",
+        "body": "{\"room_name\":\"主播\",\"live_status\":2}"
+      },
+      {
+        "path": "/api/live/streaming_url",
+        "body": "{\"streaming_url_list\":[{\"type\":\"hls_all\",\"url\":\"https://media.example/master.m3u8\"}]}"
+      },
+      {
+        "path": "/master.m3u8",
+        "body": "#EXTM3U\n#EXT-X-STREAM-INF:BANDWIDTH=9000000,RESOLUTION=1920x1080\nhttps://media.example/high.m3u8\n#EXT-X-STREAM-INF:BANDWIDTH=1000000,RESOLUTION=640x360\nhttps://media.example/low.m3u8\n"
+      }
+    ],
+    "offline": [
+      {
+        "path": "/api/live/live_info",
+        "body": "{\"room_name\":\"主播\",\"live_status\":0}"
+      }
+    ],
+    "expected_live": {
+      "is_live": true,
+      "anchor_name": "主播",
+      "m3u8_url": "https://media.example/master.m3u8",
+      "record_url": "http://media.example/high.m3u8"
+    },
+    "expected_offline": {
+      "is_live": false,
+      "anchor_name": "主播"
+    },
+    "expected_ld": {
+      "is_live": true,
+      "anchor_name": "主播",
+      "m3u8_url": "https://media.example/master.m3u8",
+      "record_url": "http://media.example/low.m3u8"
+    }
+  },
+  {
+    "platform": "xiaohongshu",
+    "url": "https://www.xiaohongshu.com/user/profile/10001",
+    "live": [
+      {
+        "path": "/user/profile/10001",
+        "body": "<script>window.__INITIAL_STATE__={\"liveStream\": {\"liveStatus\": \"success\", \"roomData\": {\"roomInfo\": {\"roomTitle\": \"标题\", \"deeplink\": \"xhsdiscover://live?host_nickname=%E4%B8%BB%E6%92%AD&flvUrl=http%3A%2F%2Flive-source-play.xhscdn.com%2Flive%2F10001.flv\"}}}}</script>"
+      }
+    ],
+    "offline": [
+      {
+        "path": "/user/profile/10001",
+        "body": "<title>@主播 的个人主页</title>"
+      }
+    ],
+    "expected_live": {
+      "is_live": true,
+      "anchor_name": "主播",
+      "title": "标题",
+      "record_url": "http://live-source-play.xhscdn.com/live/10001.flv"
+    },
+    "expected_offline": {
+      "is_live": false,
+      "anchor_name": "主播"
+    }
+  },
+  {
+    "platform": "xhs",
+    "url": "https://xhslink.com/share/10001",
+    "live": [
+      {
+        "path": "/share/10001",
+        "body": "",
+        "status": 302,
+        "headers": {
+          "location": "https://www.xiaohongshu.com/user/profile/10001"
+        }
+      },
+      {
+        "path": "/user/profile/10001",
+        "body": "<script>window.__INITIAL_STATE__={\"liveStream\": {\"liveStatus\": \"success\", \"roomData\": {\"roomInfo\": {\"roomTitle\": \"标题\", \"deeplink\": \"xhsdiscover://live?host_nickname=%E4%B8%BB%E6%92%AD&flvUrl=http%3A%2F%2Flive-source-play.xhscdn.com%2Flive%2F10001.flv\"}}}}</script>"
+      }
+    ],
+    "offline": [
+      {
+        "path": "/share/10001",
+        "body": "",
+        "status": 302,
+        "headers": {
+          "location": "https://www.xiaohongshu.com/user/profile/10001"
+        }
+      },
+      {
+        "path": "/user/profile/10001",
+        "body": "<title>@主播 的个人主页</title>"
+      }
+    ],
+    "expected_live": {
+      "is_live": true,
+      "anchor_name": "主播",
+      "title": "标题",
+      "record_url": "http://live-source-play.xhscdn.com/live/10001.flv"
+    },
+    "expected_offline": {
+      "is_live": false,
+      "anchor_name": "主播"
+    }
+  },
+  {
+    "platform": "jd",
+    "url": "https://3.cn/s/10001",
+    "live": [
+      {
+        "path": "/s/10001",
+        "body": "",
+        "status": 302,
+        "headers": {
+          "location": "https://lives.jd.com/live?authorId=10001"
+        }
+      },
+      {
+        "path": "/live",
+        "body": ""
+      },
+      {
+        "path": "/talent_head_findTalentMsg",
+        "body": "{\"result\":{\"talentName\":\"主播\",\"livingRoomJump\":{\"params\":{\"id\":\"10001\"}}}}"
+      },
+      {
+        "path": "/client.action",
+        "body": "{\"data\":{\"status\":1,\"videoUrl\":\"https://media.example/live.flv\",\"h5VideoUrl\":\"https://media.example/master.m3u8\"}}"
+      },
+      {
+        "path": "/jdTalentContentList",
+        "body": "{\"result\":{\"content\":[{\"title\":\"标题\"}]}}"
+      }
+    ],
+    "offline": [
+      {
+        "path": "/s/10001",
+        "body": "",
+        "status": 302,
+        "headers": {
+          "location": "https://lives.jd.com/live?authorId=10001"
+        }
+      },
+      {
+        "path": "/live",
+        "body": ""
+      },
+      {
+        "path": "/talent_head_findTalentMsg",
+        "body": "{\"result\":{\"talentName\":\"主播\",\"livingRoomJump\":{\"params\":{\"id\":\"10001\"}}}}"
+      },
+      {
+        "path": "/client.action",
+        "body": "{\"data\":{\"status\":0}}"
+      }
+    ],
+    "expected_live": {
+      "is_live": true,
+      "anchor_name": "主播",
+      "title": "标题",
+      "record_url": "https://media.example/master.m3u8"
+    },
+    "expected_offline": {
+      "is_live": false,
+      "anchor_name": "主播"
+    }
+  },
+  {
+    "platform": "shopee",
+    "url": "https://live.shopee.sg/share",
+    "live": [
+      {
+        "path": "/share",
+        "body": "",
+        "status": 302,
+        "headers": {
+          "location": "https://live.shopee.sg/room?session=10001"
+        }
+      },
+      {
+        "path": "/room",
+        "body": ""
+      },
+      {
+        "path": "/api/v1/play_param/session",
+        "body": "{\"data\":{\"play_param_list\":[{\"session\":{\"username\":\"user\",\"nickname\":\"主播\"},\"play_param\":{\"las_param\":{\"mpd\":\"\"},\"play_url_list\":[\"https://media.example/live.flv\",\"https://media.example/backup.flv\"]}}]}}"
+      }
+    ],
+    "offline": [
+      {
+        "path": "/share",
+        "body": "",
+        "status": 302,
+        "headers": {
+          "location": "https://live.shopee.sg/room?session=10001"
+        }
+      },
+      {
+        "path": "/room",
+        "body": ""
+      },
+      {
+        "path": "/api/v1/play_param/session",
+        "body": "{\"data\":{\"play_param_list\":[]}}"
+      }
+    ],
+    "expected_live": {
+      "is_live": true,
+      "anchor_name": "主播_user",
+      "record_url": "https://media.example/live.flv"
+    },
+    "expected_offline": {
+      "is_live": false,
+      "anchor_name": ""
+    }
+  },
+  {
+    "platform": "baidu",
+    "url": "https://live.baidu.com/?room_id=10001&from=web",
+    "live": [
+      {
+        "path": "/searchbox",
+        "body": "{\"data\":{\"room\":{\"host\":{\"name\":\"主播\"},\"status\":\"0\",\"video\":{\"title\":\"标题\",\"url_clarity_list\":[{\"urls\":{\"flv\":\"http://live.example/high.flv\"}},{\"urls\":{\"flv\":\"http://live.example/low.flv\"}}]}}}}"
+      }
+    ],
+    "offline": [
+      {
+        "path": "/searchbox",
+        "body": "{\"data\":{\"room\":{\"host\":{\"name\":\"主播\"},\"status\":\"1\",\"video\":{\"title\":\"标题\",\"url_clarity_list\":[{\"urls\":{\"flv\":\"http://live.example/high.flv\"}},{\"urls\":{\"flv\":\"http://live.example/low.flv\"}}]}}}}"
+      }
+    ],
+    "expected_live": {
+      "is_live": true,
+      "anchor_name": "主播",
+      "title": "标题",
+      "record_url": "https://hls.liveshow.bdstatic.com/live/high.m3u8"
+    },
+    "expected_offline": {
+      "is_live": false,
+      "anchor_name": "主播"
+    },
+    "expected_ld": {
+      "is_live": true,
+      "anchor_name": "主播",
+      "title": "标题",
+      "record_url": "https://hls.liveshow.bdstatic.com/live/low.m3u8"
+    }
+  }
+]

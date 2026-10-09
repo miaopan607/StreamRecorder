@@ -1,43 +1,41 @@
 # StreamRecorder
 
-Windows 直播录制工具，桌面端使用 **Tauri 2 + React + TypeScript**，Python worker 负责开播探测、录制和推送。两者通过 **stdio + UTF-8 JSON lines** 通信，不需要 HTTP 服务或 .NET Desktop Runtime。
+Windows 直播录制工具，使用 **Tauri 2 + React + TypeScript** 界面和 **Rust 原生核心**。界面直接调用具体 Tauri 命令，启动引导返回完整快照，状态由带 revision 的事件更新；不再启动 Python worker，也不使用 stdio 业务协议。
 
 ## 功能
 
-- 中文任务工作台：列表 / 卡片、列显示设置、任务新增 / 编辑 / 删除、批量导入和批量监控。
-- 自动开播检测和 ffmpeg 录制；显示实际录制状态、时长、速度，打开保存目录和最新文件。
-- 录制、网络、命名、推送和主题设置自动保存；Cookies 与账号单独保存、重新加载。
-- 浅色 / 深色 / 跟随系统；托盘、系统通知、单实例和登录 Windows 后启动到托盘。
-- 真实依赖诊断、核心服务测试和最近 300 条日志。
+- 中文任务工作台：列表 / 卡片、列设置、任务新增 / 编辑 / 删除、批量导入和监控。
+- 自动开播检测和 ffmpeg 录制；显示录制状态、时长、速度，打开保存目录和最新文件。
+- 录制、网络、命名、通知和主题设置自动保存；Cookies 与账号独立管理。
+- 浅色 / 深色 / 跟随系统；托盘、系统通知、单实例和 Windows 登录后启动到托盘。
+- 核心服务诊断、FFmpeg 检测和最近 300 条日志。
 
 ## 运行要求
 
 - Windows 10 或更高版本，x64。
 - Microsoft Edge WebView2 Evergreen Runtime。
-- PATH 中可用的 Python 3.10+，并安装 worker 依赖：
-  ```powershell
-  python -m pip install streamget==4.0.10
-  ```
-- PATH 中可用的 `ffmpeg`。部分直播平台还需要 Node.js；诊断页会显示其状态。
+- PATH 中可用的 `ffmpeg`。
 
-程序不会自动安装这些依赖。缺少 Python 或 streamget 时，桌面界面仍可打开，具体错误显示在诊断页；缺少 WebView2 时会显示原生启动错误。
+目标机器不需要 Python、StreamGet、Node.js 或 .NET Desktop Runtime。少量平台签名 JS 和咪咕 WASM 解释器内嵌在 EXE 中，不调用外部脚本运行时。缺少 ffmpeg 只影响录制：界面、配置、探测和核心诊断仍可用；缺少 WebView2 会显示原生启动错误。
 
-## 目录
+## 目录与数据
 
 ```text
 src/StreamRecorder.Tauri/
-  src/                     React 界面、类型与应用状态
-  src-tauri/               Rust 桌面壳、worker 通信、Windows 服务
-worker/streamrecorder_worker/ Python 录制核心
-runtime/                   开发运行数据
-artifacts/publish/win-x64/  正式发布目录
+  src/                        React 界面、类型与应用状态
+  src-tauri/src/core/          Rust 配置、平台探测、调度、录制与通知
+  src-tauri/src/               Windows 桌面、托盘和生命周期
+runtime/                      开发运行数据
+artifacts/publish/win-x64/     正式发布目录
 ```
 
-任务、设置、Cookies、账号和列表布局继续读取原有 `runtime/*.json`。账号中的嵌套 JSON、未知配置键和已有布局设置会保留。配置和凭据仍存储在本地 JSON 文件中，请勿公开整个 runtime 目录。
+沿用 `runtime/*.json`，保留账号嵌套 JSON、未知设置键、历史任务别名和列表布局。配置使用同目录临时文件、备份与原子替换；落盘失败不提交内存配置。账号和 Cookies 仍是本地明文 JSON，请勿公开整个 runtime 目录。
+
+相对保存路径按应用根目录解析，不按启动命令的工作目录解析。任务配置目录不会被自动生成的录制子目录覆盖。
 
 ## 开发运行
 
-需要 Node.js、npm、Rust MSVC 工具链、Microsoft C++ Build Tools（桌面 C++ 与 Windows SDK）、WebView2 以及上面的 worker 依赖。
+需要 Node.js、npm、Rust MSVC 工具链、Microsoft C++ Build Tools（桌面 C++ 与 Windows SDK）、WebView2 和 ffmpeg。Node.js 仅用于前端开发与构建。
 
 ```powershell
 cd .\src\StreamRecorder.Tauri
@@ -45,7 +43,7 @@ npm.cmd ci
 npm.cmd run tauri -- dev
 ```
 
-开发态按仓库根目录定位 worker 和 runtime，不按启动命令的工作目录定位。原生桌面验收可在开发态设置 `STREAMRECORDER_DEV_ROOT` 指向独立目录；该目录需要事先准备 worker/，发布版不读取这个环境变量。
+开发态默认使用仓库根目录。桌面验收可设置 `STREAMRECORDER_DEV_ROOT` 指向已存在的独立目录；不需要准备 worker。发布版不读取这个环境变量。
 
 ## 发布便携版
 
@@ -55,46 +53,56 @@ npm.cmd run tauri -- dev
 .\publish-release.ps1
 ```
 
-发布入口构建 Windows x64 原生 EXE，并复制到：
+输出：
 
 ```text
 artifacts/publish/win-x64/StreamRecorder.exe
 ```
 
-只需分发 `StreamRecorder.exe`，不需要旁置前端资源、DLL 或 worker 文件。首次运行会在 EXE 同级生成：
+只需分发这个 EXE，不需要旁置前端资源、worker、JS 或 DLL。首次运行仅在 EXE 同级建立 `runtime/`，保存配置、图标、录制文件和 WebView2 缓存。已有 worker/runtime、未知文件和录制文件不会被扫描删除。
 
-```text
-worker/streamrecorder_worker/  内嵌 Python 文件
-runtime/                     JSON 配置、录制文件及 WebView2 缓存
-```
+默认录制目录为 `runtime/recordings`。便携目录必须可写；无法写入时提示移动目录，不会改用 AppData。WebView2 和 ffmpeg 仍由目标机器提供。自启动使用当前 EXE 的绝对路径，移动便携目录后重新启动可更新已启用的启动项。
 
-已有 worker/runtime 和录制文件不会因重新发布而删除。相对保存路径始终按 **EXE 所在目录** 解析；默认录制目录是 `runtime/recordings`。便携目录必须可写，不可写时程序会提示移动目录，不会悄悄切换到 AppData。
+## 核心运行约束
 
-单 EXE 并不包含 WebView2、Python、streamget 或 ffmpeg，这些运行依赖仍需由目标机器提供。开机启动使用当前 EXE 的绝对路径，移动便携目录后重新启动程序可更新已启用的启动项。
+- 探测使用 FIFO 队列，全局最多 16 个请求，各平台按设置限流；降限不会绕过已运行计数。
+- 重检立即入队，不等待网络响应。停止、编辑和删除通过 generation 与取消令牌隔离旧结果。
+- ffmpeg、转封装和自定义脚本受 Windows Job Object 管理；stderr 持续排空，诊断尾部最多 64 KiB。
+- 批量停止并行执行：8 秒优雅停止，再用最多 2 秒强制回收，不按任务数累加。
+- 通知独立于录制生命周期，每渠道限时 10 秒；HTTP 成功仍须检查业务确认，SMTP 使用异步 SSL 465。
+- 有限 HLS 在 EOF 自然结束，不再设置 `reconnect_at_eof`。MP4 保留关键帧分片，避免提前写空 moov 导致 AAC 码流转换失败。
 
 ## 验证
 
 ```powershell
 cd .\src\StreamRecorder.Tauri
-npm.cmd run build
 npm.cmd run test
-cd .\src-tauri
-cargo test
+npm.cmd run build
+cargo test --manifest-path .\src-tauri\Cargo.toml --bin StreamRecorder
 ```
 
-worker 原有测试可从仓库根目录执行：
+默认 Rust 套件不访问公网、不使用用户 runtime，也不要求 ffmpeg。平台测试通过真实 loopback HTTP 和生产解析路径，覆盖 51 个平台键的开播 / 未开播、支持的画质、畸形响应、登录失败与 Cookie 更新；签名使用独立上游向量校对。核心回归覆盖配置失败保持、探测取消、并发降限、stderr 洪泛、进程树回收和重复退出。
+
+从仓库根目录执行真实媒体验收：
 
 ```powershell
-$env:PYTHONPATH = "$PWD\worker"
-python -B -m unittest discover -s .\worker\streamrecorder_worker\tests
+$ffmpegBin = Join-Path $PWD 'artifacts\tauri-smoke-tools\ffmpeg\ffmpeg-9.0.2-essentials_build\bin'
+$env:PATH = "$ffmpegBin;$env:PATH"
+cargo test --manifest-path .\src\StreamRecorder.Tauri\src-tauri\Cargo.toml --bin StreamRecorder core::recording::tests::ffmpeg_smoke -- --ignored --nocapture --test-threads=1
 ```
 
-本次迁移已通过真实 Tauri 窗口操作、配置持久化、旧数据兼容、托盘、单实例、自启动与持续 HTTP FLV 录制验收；录制文件由 ffprobe 检查音视频流。没有使用模拟 worker 或浏览器页面代替桌面程序。
+CoreService 的真实录制烟测已通过有限 HTTP HLS、持续 HTTP FLV、TS/FLV/MKV/MOV/MP4/MP3/M4A、12 个 TS 分段及转 MP4，输出由 ffprobe 检查。同次有限 HLS 录制只请求一次首分片；慢探测和失效 webhook 下仍可保存、ping 和停止。
 
-### 现有核心限制
+正式 EXE 已在中文空格便携目录中通过原生 Windows UIA 验收，应用 PATH 仅包含 ffmpeg、System32 和 Windows。实际操作覆盖添加 / 删除任务、中文设置连续自动保存、Cookie 字符串和嵌套账号、重检与 ping、重启恢复、关闭到托盘继续录制、单实例恢复窗口及托盘退出后无 FFmpeg 残留。缺 ffmpeg 时仍能保存和 ping；运行中提供 ffmpeg 后刷新依赖、重检并完成真实录制。
 
-Python worker 的录制算法和 FFmpeg 参数在此次前端迁移中保持不变。验证中发现，现有 `-reconnect_at_eof 1` 会使本地有限 HTTP HLS 清单被反复读取，无法完成录制输入探测；该场景未通过验收。持续 FLV 流的实际录制链路已通过。这一问题属于现有录制核心，不在此次前端迁移中改动。
+公开平台实际探测：虎牙 `11342412` 返回周星星及直播流，斗鱼 `288016` 返回英雄联盟赛事及直播流，抖音 `745964462470` 返回喜剧电影笑不停并明确未开播。该验收不等于这些平台全部账号、私密房间或所有其他平台已获授权验证。
+
+## 平台边界
+
+保留固定 `streamget==4.0.10` 的 51 个平台键 / 50 个解析器，不使用 Python 回退。平台停运、接口改版、风控或缺少授权会返回具体错误，不能视为未开播或录制成功。离线夹具通过不代表全部平台的真实授权录制通过。
+
+咪咕支持识别旧 / 新 WASM ABI，执行受到 fuel、内存、宿主 I/O 和取消边界限制。真实新 SDK 夹具已验证资源限制，普通无 puData 直链已覆盖；授权分支尚缺可校对的有效输入，不能宣称其真实签名录制通过。
 
 ## 许可证
 
-Apache-2.0。
+项目采用 Apache-2.0。迁移的 StreamGet 算法与必要签名资源保留上游 MIT 许可，文本位于 `src/StreamRecorder.Tauri/src-tauri/src/core/assets/STREAMGET-LICENSE`，同时内嵌进 EXE。

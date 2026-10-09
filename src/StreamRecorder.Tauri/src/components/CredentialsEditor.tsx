@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { store, useAppState } from "../lib/store";
-import { workerCall } from "../lib/desktop";
+import { getCookies, updateCookies, getAccounts, updateAccounts } from "../lib/desktop";
 import { accountKeys, cookiePlatforms } from "../lib/settings";
 import type { Json } from "../lib/types";
 import Field from "./Field";
@@ -54,16 +54,13 @@ export default function CredentialsEditor({
     setBusy(true);
     try {
       if (kind === "cookies") {
-        const response = await workerCall<{ cookies: Record<string, string> }>(
-          "cookies.update",
-          { cookies: values },
+        const cookies = Object.fromEntries(
+          Object.entries(values).map(([key, value]) => [key, String(value ?? "")]),
         );
+        const response = await updateCookies(cookies);
         store.update({ cookies: response.cookies });
       } else {
-        const response = await workerCall<{ accounts: Record<string, Json> }>(
-          "accounts.update",
-          { accounts: values },
-        );
+        const response = await updateAccounts(values);
         store.update({ accounts: response.accounts });
       }
       setDirty(false);
@@ -81,14 +78,10 @@ export default function CredentialsEditor({
     setBusy(true);
     try {
       if (kind === "cookies") {
-        const response = await workerCall<{ cookies: Record<string, string> }>(
-          "cookies.get",
-        );
+        const response = await getCookies();
         store.update({ cookies: response.cookies });
       } else {
-        const response = await workerCall<{ accounts: Record<string, Json> }>(
-          "accounts.get",
-        );
+        const response = await getAccounts();
         store.update({ accounts: response.accounts });
       }
       setDirty(false);
@@ -113,7 +106,7 @@ export default function CredentialsEditor({
         <div className="inline-actions">
           <span className="muted">{dirty ? "有未保存的修改" : notice}</span>
           <button
-            disabled={busy || state.worker.status !== "connected"}
+            disabled={busy || state.core.status !== "connected"}
             onClick={() => {
               if (dirty) setReloading(true);
               else void reload();
@@ -123,7 +116,7 @@ export default function CredentialsEditor({
           </button>
           <button
             className="primary"
-            disabled={busy || state.worker.status !== "connected"}
+            disabled={busy || state.core.status !== "connected"}
             onClick={() => void save()}
           >
             {busy ? "正在处理…" : `保存${title}`}

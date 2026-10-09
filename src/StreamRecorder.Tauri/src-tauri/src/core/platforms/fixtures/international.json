@@ -1,0 +1,182 @@
+[
+  {
+    "platform": "youtube",
+    "url": "https://www.youtube.com/watch?v=10001",
+    "live": [
+      {
+        "path": "/watch",
+        "body": "var ytInitialPlayerResponse = {\"videoDetails\": {\"author\": \"主播\", \"isLive\": true, \"title\": \"标题\"}, \"streamingData\": {\"hlsManifestUrl\": \"https://media.example/master.m3u8\"}};var meta = document.createElement"
+      },
+      {
+        "path": "/master.m3u8",
+        "body": "#EXTM3U\n#EXT-X-STREAM-INF:BANDWIDTH=9000000,RESOLUTION=1920x1080\nhttps://media.example/high.m3u8\n#EXT-X-STREAM-INF:BANDWIDTH=1000000,RESOLUTION=640x360\nhttps://media.example/low.m3u8\n"
+      }
+    ],
+    "offline": [
+      {
+        "path": "/watch",
+        "body": "var ytInitialPlayerResponse = {\"videoDetails\": {\"author\": \"主播\", \"isLive\": false}};var meta = document.createElement"
+      }
+    ],
+    "expected_live": {
+      "is_live": true,
+      "anchor_name": "主播",
+      "title": "标题",
+      "m3u8_url": "https://media.example/master.m3u8",
+      "record_url": "https://media.example/high.m3u8"
+    },
+    "expected_offline": {
+      "is_live": false,
+      "anchor_name": "主播"
+    },
+    "expected_ld": {
+      "is_live": true,
+      "anchor_name": "主播",
+      "title": "标题",
+      "m3u8_url": "https://media.example/master.m3u8",
+      "record_url": "https://media.example/low.m3u8"
+    }
+  },
+  {
+    "platform": "twitch",
+    "url": "https://www.twitch.tv/user",
+    "live": [
+      {
+        "path": "/gql",
+        "body": "{\"data\":{\"streamPlaybackAccessToken\":{\"value\":\"fixture-access\",\"signature\":\"fixture-sign\",\"authorization\":{\"isForbidden\":false}}}}",
+        "body_contains": "PlaybackAccessToken_Template"
+      },
+      {
+        "path": "/gql",
+        "body": "[{\"data\":{\"user\":{\"displayName\":\"主播\",\"stream\":{\"id\":1},\"broadcastSettings\":{\"title\":\"标题\"}}}}]",
+        "body_contains": "ComscoreStreamingQuery"
+      },
+      {
+        "path": "/api/channel/hls/user.m3u8",
+        "body": "#EXTM3U\n#EXT-X-STREAM-INF:BANDWIDTH=9000000,RESOLUTION=1920x1080\nhttps://media.example/high.m3u8\n#EXT-X-STREAM-INF:BANDWIDTH=1000000,RESOLUTION=640x360\nhttps://media.example/low.m3u8\n"
+      }
+    ],
+    "offline": [
+      {
+        "path": "/gql",
+        "body": "{\"data\":{\"streamPlaybackAccessToken\":{\"value\":\"fixture-access\",\"signature\":\"fixture-sign\",\"authorization\":{\"isForbidden\":false}}}}",
+        "body_contains": "PlaybackAccessToken_Template"
+      },
+      {
+        "path": "/gql",
+        "body": "[{\"data\":{\"user\":{\"displayName\":\"主播\",\"stream\":{},\"broadcastSettings\":{\"title\":\"标题\"}}}}]",
+        "body_contains": "ComscoreStreamingQuery"
+      }
+    ],
+    "expected_live": {
+      "is_live": true,
+      "anchor_name": "主播-user",
+      "title": "标题",
+      "record_url": "https://media.example/high.m3u8"
+    },
+    "expected_offline": {
+      "is_live": false,
+      "anchor_name": "主播-user"
+    },
+    "expected_ld": {
+      "is_live": true,
+      "anchor_name": "主播-user",
+      "title": "标题",
+      "record_url": "https://media.example/low.m3u8"
+    }
+  },
+  {
+    "platform": "faceit",
+    "url": "https://www.faceit.com/players/user/stream",
+    "live": [
+      {
+        "path": "/api/users/v1/nicknames/user",
+        "body": "{\"payload\":{\"id\":1}}"
+      },
+      {
+        "path": "/api/stream/v1/streamings",
+        "body": "{\"payload\":[{\"userNickname\":\"主播\",\"platformId\":\"user\",\"platform\":\"twitch\"}]}"
+      },
+      {
+        "path": "/gql",
+        "body": "{\"data\":{\"streamPlaybackAccessToken\":{\"value\":\"fixture-access\",\"signature\":\"fixture-sign\",\"authorization\":{\"isForbidden\":false}}}}",
+        "body_contains": "PlaybackAccessToken_Template"
+      },
+      {
+        "path": "/gql",
+        "body": "[{\"data\":{\"user\":{\"displayName\":\"主播\",\"stream\":{\"id\":1},\"broadcastSettings\":{\"title\":\"标题\"}}}}]",
+        "body_contains": "ComscoreStreamingQuery"
+      },
+      {
+        "path": "/api/channel/hls/user.m3u8",
+        "body": "#EXTM3U\n#EXT-X-STREAM-INF:BANDWIDTH=9000000,RESOLUTION=1920x1080\nhttps://media.example/high.m3u8\n#EXT-X-STREAM-INF:BANDWIDTH=1000000,RESOLUTION=640x360\nhttps://media.example/low.m3u8\n"
+      }
+    ],
+    "offline": [
+      {
+        "path": "/api/users/v1/nicknames/user",
+        "body": "{\"payload\":{\"id\":1}}"
+      },
+      {
+        "path": "/api/stream/v1/streamings",
+        "body": "{\"payload\":[]}"
+      }
+    ],
+    "expected_live": {
+      "is_live": true,
+      "anchor_name": "主播",
+      "title": "标题",
+      "record_url": "https://media.example/high.m3u8"
+    },
+    "expected_offline": {
+      "is_live": false,
+      "anchor_name": "user"
+    },
+    "expected_ld": {
+      "is_live": true,
+      "anchor_name": "主播",
+      "title": "标题",
+      "record_url": "https://media.example/low.m3u8"
+    }
+  },
+  {
+    "platform": "tiktok",
+    "url": "https://www.tiktok.com/@user/live",
+    "live": [
+      {
+        "path": "/@user/live",
+        "body": "<script id=\"SIGI_STATE\" type=\"application/json\">{\"LiveRoom\": {\"liveRoomUserInfo\": {\"user\": {\"nickname\": \"主播\", \"uniqueId\": \"user\", \"status\": 2}, \"liveRoom\": {\"title\": \"标题\", \"streamData\": {\"pull_data\": {\"stream_data\": \"{\\\"data\\\": {\\\"high\\\": {\\\"main\\\": {\\\"sdk_params\\\": \\\"{\\\\\\\"vbitrate\\\\\\\": 4000, \\\\\\\"VCodec\\\\\\\": \\\\\\\"h264\\\\\\\", \\\\\\\"resolution\\\\\\\": \\\\\\\"1920x1080\\\\\\\"}\\\", \\\"hls\\\": \\\"https://media.example/high.m3u8\\\", \\\"flv\\\": \\\"https://media.example/high.flv\\\"}}, \\\"low\\\": {\\\"main\\\": {\\\"sdk_params\\\": \\\"{\\\\\\\"vbitrate\\\\\\\": 500, \\\\\\\"VCodec\\\\\\\": \\\\\\\"h264\\\\\\\", \\\\\\\"resolution\\\\\\\": \\\\\\\"640x360\\\\\\\"}\\\", \\\"hls\\\": \\\"https://media.example/low.m3u8\\\", \\\"flv\\\": \\\"https://media.example/low.flv\\\"}}}}\"}}}}}}</script>"
+      },
+      {
+        "path": "/high.m3u8",
+        "body": ""
+      },
+      {
+        "path": "/low.m3u8",
+        "body": ""
+      }
+    ],
+    "offline": [
+      {
+        "path": "/@user/live",
+        "body": "<script id=\"SIGI_STATE\" type=\"application/json\">{\"LiveRoom\": {\"liveRoomUserInfo\": {\"user\": {\"nickname\": \"主播\", \"uniqueId\": \"user\", \"status\": 4}, \"liveRoom\": {\"title\": \"标题\", \"streamData\": {\"pull_data\": {\"stream_data\": \"{\\\"data\\\": {\\\"high\\\": {\\\"main\\\": {\\\"sdk_params\\\": \\\"{\\\\\\\"vbitrate\\\\\\\": 4000, \\\\\\\"VCodec\\\\\\\": \\\\\\\"h264\\\\\\\", \\\\\\\"resolution\\\\\\\": \\\\\\\"1920x1080\\\\\\\"}\\\", \\\"hls\\\": \\\"https://media.example/high.m3u8\\\", \\\"flv\\\": \\\"https://media.example/high.flv\\\"}}, \\\"low\\\": {\\\"main\\\": {\\\"sdk_params\\\": \\\"{\\\\\\\"vbitrate\\\\\\\": 500, \\\\\\\"VCodec\\\\\\\": \\\\\\\"h264\\\\\\\", \\\\\\\"resolution\\\\\\\": \\\\\\\"640x360\\\\\\\"}\\\", \\\"hls\\\": \\\"https://media.example/low.m3u8\\\", \\\"flv\\\": \\\"https://media.example/low.flv\\\"}}}}\"}}}}}}</script>"
+      }
+    ],
+    "expected_live": {
+      "is_live": true,
+      "anchor_name": "主播-user",
+      "title": "标题",
+      "record_url": "http://media.example/high.m3u8?codec=h264"
+    },
+    "expected_offline": {
+      "is_live": false,
+      "anchor_name": "主播-user"
+    },
+    "expected_ld": {
+      "is_live": true,
+      "anchor_name": "主播-user",
+      "title": "标题",
+      "record_url": "http://media.example/low.m3u8?codec=h264"
+    }
+  }
+]

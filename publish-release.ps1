@@ -24,7 +24,7 @@ try {
     }
     Copy-Item -LiteralPath $executable -Destination (Join-Path $output 'StreamRecorder.exe') -Force
     Write-Host ('已发布：' + (Join-Path $output 'StreamRecorder.exe'))
-    Write-Host '首次运行自动生成 worker/ 和 runtime/。已有运行数据不会删除。'
+    Write-Host '首次运行自动生成 runtime/。已有运行数据不会删除。'
 }
 finally {
     Pop-Location

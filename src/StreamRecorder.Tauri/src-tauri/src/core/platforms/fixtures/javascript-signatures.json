@@ -1,0 +1,5 @@
+[
+  {"kind":"xbogus","args":["aid=6383&web_rid=10001","Mozilla/5.0 Test"],"expected":"DFSzswSLCRiANeCbCx/S-t9WcBJZ"},
+  {"kind":"haixiu","args":[{"accessToken":"fixture-token","tku":"3000006","c":"10138100100000","_st1":1760000000123},"crypto-js.min.js"],"expected":"e407284da2089fceb59eee8645a39aac"},
+  {"kind":"liveme","args":["10001","crypto-js.min.js"],"expected":{"alias":"liveme","tongdun_black_box":"","os":"web","lm_s_id":"LM6000101139961122666757","lm_s_ts":"17600000001231","lm_s_str":"d56adcc70a17c433fe7e40d2fb5de066","lm_s_ver":1,"h5":1,"_time":1760000000123,"thirdchannel":6,"videoid":"10001","area":"zh","vali":"PPPPlPPPPmPPPPP","lm_s_sign":"4280dbfe30a540824249a700cc5bcec6"}}
+]

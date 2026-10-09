@@ -1,11 +1,14 @@
+mod core;
 mod desktop;
 mod paths;
 mod ui_state;
-mod worker;
+use core::{CoreService, models::*};
+use serde::Serialize;
 use parking_lot::Mutex;
 use paths::ProjectPaths;
 use serde_json::{json, Value};
 use std::{
+    collections::BTreeMap,
     path::PathBuf,
     sync::{
         atomic::{AtomicBool, AtomicUsize, Ordering},
@@ -13,43 +16,85 @@ use std::{
     },
 };
 use tauri::{Emitter, Manager, State};
-use worker::WorkerClient;
 
 pub struct DesktopState {
     paths: ProjectPaths,
-    worker: Arc<WorkerClient>,
-    ready: tokio::sync::watch::Sender<bool>,
+    core: Arc<CoreService>,
     renderer_ready: AtomicBool,
     exit_request: Mutex<Option<String>>,
     exiting: AtomicBool,
     pub tray: AtomicUsize,
 }
 #[tauri::command]
-async fn worker_call(
-    method: String,
-    body: Value,
-    state: State<'_, DesktopState>,
-) -> Result<Value, String> {
-    if !worker::METHODS.contains(&method.as_str()) {
-        return Err("不允许调用此核心服务方法".into());
-    }
-    state.worker.call(&method, body).await
+async fn health_ping(state: State<'_, DesktopState>) -> Result<PingReply, String> {
+    state.core.health_ping()
 }
 #[tauri::command]
-async fn desktop_bootstrap(state: State<'_, DesktopState>) -> Result<Value, String> {
-    let mut ready = state.ready.subscribe();
-    if !*ready.borrow() {
-        ready.changed().await.map_err(|e| e.to_string())?;
-    }
+async fn settings_update(settings: CoreSettings, state: State<'_, DesktopState>) -> Result<SettingsReply, String> {
+    state.core.settings_update(settings).await
+}
+#[tauri::command]
+async fn cookies_get(state: State<'_, DesktopState>) -> Result<CookiesReply, String> {
+    state.core.cookies_get()
+}
+#[tauri::command]
+async fn cookies_update(cookies: BTreeMap<String, String>, state: State<'_, DesktopState>) -> Result<CookiesReply, String> {
+    state.core.cookies_update(cookies).await
+}
+#[tauri::command]
+async fn accounts_get(state: State<'_, DesktopState>) -> Result<AccountsReply, String> {
+    state.core.accounts_get()
+}
+#[tauri::command]
+async fn accounts_update(accounts: BTreeMap<String, Value>, state: State<'_, DesktopState>) -> Result<AccountsReply, String> {
+    state.core.accounts_update(accounts).await
+}
+#[tauri::command]
+async fn jobs_upsert(jobs: Vec<JobInput>, state: State<'_, DesktopState>) -> Result<UpsertReply, String> {
+    state.core.jobs_upsert(jobs).await
+}
+#[tauri::command]
+async fn jobs_delete(ids: Vec<String>, state: State<'_, DesktopState>) -> Result<DeleteReply, String> {
+    state.core.jobs_delete(ids).await
+}
+#[tauri::command]
+async fn jobs_start_monitoring(ids: Vec<String>, state: State<'_, DesktopState>) -> Result<MonitoringReply, String> {
+    state.core.jobs_start_monitoring(ids).await
+}
+#[tauri::command]
+async fn jobs_stop_monitoring(ids: Vec<String>, state: State<'_, DesktopState>) -> Result<MonitoringReply, String> {
+    state.core.jobs_stop_monitoring(ids).await
+}
+#[tauri::command]
+async fn jobs_recheck(ids: Vec<String>, state: State<'_, DesktopState>) -> Result<RecheckReply, String> {
+    state.core.jobs_recheck(ids)
+}
+#[derive(Serialize)]
+struct DesktopBootstrap {
+    #[serde(flatten)]
+    core: CoreBootstrap,
+    dependencies: Value,
+    ui_state: ui_state::UiState,
+    autostart_enabled: bool,
+    app_root: PathBuf,
+    data_root: PathBuf,
+}
+#[tauri::command]
+async fn desktop_bootstrap(state: State<'_, DesktopState>) -> Result<DesktopBootstrap, String> {
+    let _ = state.core.wait_ready().await;
     state.renderer_ready.store(true, Ordering::Release);
-    let cache = state.worker.cache.lock().clone();
-    Ok(
-        json!({"snapshot":cache.snapshot,"cookies":cache.cookies,"accounts":cache.accounts,"dependencies":cache.dependencies,"worker_state":cache.connection,"logs":cache.logs,"ui_state":ui_state::load(&state.paths.data_root.join("desktop_ui_state.json")),"autostart_enabled":desktop::get_autostart().unwrap_or(false),"app_root":state.paths.app_root,"data_root":state.paths.data_root}),
-    )
-}
-#[tauri::command]
-fn ui_state_get(state: State<'_, DesktopState>) -> ui_state::UiState {
-    ui_state::load(&state.paths.data_root.join("desktop_ui_state.json"))
+    let dependencies = core::dependencies::inspect().await;
+    state.core.set_ffmpeg_available(dependencies["ffmpeg"]["available"].as_bool().unwrap_or(false));
+    let path = state.paths.data_root.join("desktop_ui_state.json");
+    let ui_state = tokio::task::spawn_blocking(move || ui_state::load(&path)).await.map_err(|error| error.to_string())?;
+    Ok(DesktopBootstrap {
+        core: state.core.bootstrap(),
+        dependencies,
+        ui_state,
+        autostart_enabled: desktop::get_autostart().unwrap_or(false),
+        app_root: state.paths.app_root.clone(),
+        data_root: state.paths.data_root.clone(),
+    })
 }
 #[tauri::command]
 fn ui_state_set(desktop: State<'_, DesktopState>, state: ui_state::UiState) -> Result<(), String> {
@@ -63,13 +108,9 @@ fn set_autostart(enabled: bool) -> Result<(), String> {
     desktop::set_autostart(enabled)
 }
 #[tauri::command]
-fn get_autostart() -> Result<bool, String> {
-    desktop::get_autostart()
-}
-#[tauri::command]
 async fn refresh_dependencies(state: State<'_, DesktopState>) -> Result<Value, String> {
-    let deps = worker::dependencies().await;
-    state.worker.cache.lock().dependencies = deps.clone();
+    let deps = core::dependencies::inspect().await;
+    state.core.set_ffmpeg_available(deps["ffmpeg"]["available"].as_bool().unwrap_or(false));
     Ok(deps)
 }
 #[tauri::command]
@@ -77,12 +118,8 @@ fn open_data_folder(state: State<'_, DesktopState>) -> Result<(), String> {
     desktop::open_path(&state.paths.data_root)
 }
 fn job_path(state: &DesktopState, id: &str, latest: bool) -> Result<PathBuf, String> {
-    let cache = state.worker.cache.lock();
-    let job = cache.snapshot["jobs"]
-        .as_array()
-        .and_then(|jobs| jobs.iter().find(|j| j["id"].as_str() == Some(id)))
-        .ok_or("任务不存在")?;
-    let output = job["latest_output_path"].as_str().unwrap_or("");
+    let job = state.core.job(id).ok_or("任务不存在")?;
+    let output = job.latest_output_path.as_str();
     if latest {
         return if output.is_empty() {
             Err("当前任务还没有可播放的录制文件".into())
@@ -96,10 +133,9 @@ fn job_path(state: &DesktopState, id: &str, latest: bool) -> Result<PathBuf, Str
             return Ok(parent.to_path_buf());
         }
     }
-    let specific = job["recording_dir"].as_str().unwrap_or("");
-    let global = cache.snapshot["settings"]["live_save_path"]
-        .as_str()
-        .unwrap_or("");
+    let specific = job.input.recording_dir.as_str();
+    let snapshot = state.core.snapshot();
+    let global = snapshot.settings.live_save_path.as_str();
     Ok(if !specific.is_empty() {
         state.paths.resolve(specific)
     } else if !global.is_empty() {
@@ -195,7 +231,7 @@ async fn shutdown(app: &tauri::AppHandle) {
     if state.exiting.swap(true, Ordering::AcqRel) {
         return;
     }
-    state.worker.shutdown().await;
+    state.core.shutdown().await;
     desktop::stop_tray(state.tray.swap(0, Ordering::AcqRel));
     app.exit(0);
 }
@@ -219,12 +255,20 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_clipboard_manager::init())
         .invoke_handler(tauri::generate_handler![
-            worker_call,
+            health_ping,
+            settings_update,
+            cookies_get,
+            cookies_update,
+            accounts_get,
+            accounts_update,
+            jobs_upsert,
+            jobs_delete,
+            jobs_start_monitoring,
+            jobs_stop_monitoring,
+            jobs_recheck,
             desktop_bootstrap,
-            ui_state_get,
             ui_state_set,
             set_autostart,
-            get_autostart,
             refresh_dependencies,
             open_data_folder,
             open_job_folder,
@@ -235,14 +279,12 @@ pub fn run() {
         ])
         .setup(move |app| {
             paths
-                .prepare(!cfg!(debug_assertions))
+                .prepare()
                 .map_err(std::io::Error::other)?;
-            let client = WorkerClient::new(Some(app.handle().clone()));
-            let (ready, _) = tokio::sync::watch::channel(false);
+            let client = CoreService::new(paths.clone(), Some(app.handle().clone()));
             app.manage(DesktopState {
                 paths: paths.clone(),
-                worker: client.clone(),
-                ready,
+                core: client.clone(),
                 renderer_ready: AtomicBool::new(false),
                 exit_request: Mutex::new(None),
                 exiting: AtomicBool::new(false),
@@ -291,10 +333,7 @@ pub fn run() {
                         if state.exiting.load(Ordering::Acquire) {
                             return;
                         }
-                        let close = state.worker.cache.lock().snapshot["settings"]
-                            ["minimize_to_tray_on_close"]
-                            .as_bool()
-                            .unwrap_or(true);
+                        let close = state.core.close_to_tray();
                         if close {
                             desktop::hide(&handle, true)
                         } else {
@@ -302,10 +341,7 @@ pub fn run() {
                         }
                     }
                     tauri::WindowEvent::Resized(_) => {
-                        let minimize = state.worker.cache.lock().snapshot["settings"]
-                            ["minimize_to_tray_on_minimize"]
-                            .as_bool()
-                            .unwrap_or(false);
+                        let minimize = state.core.minimize_to_tray();
                         if minimize
                             && handle
                                 .get_webview_window("main")
@@ -322,13 +358,11 @@ pub fn run() {
                 if let Err(e) = desktop::migrate_autostart() {
                     client.log(&e)
                 }
-                let deps = worker::dependencies().await;
-                client.cache.lock().dependencies = deps;
-                if let Err(error) = client.start(&paths).await {
-                    client.connection("disconnected", &error);
-                    client.log(&error);
+                let starting = client.clone();
+                let result = tauri::async_runtime::spawn(async move { starting.start().await }).await;
+                if let Err(error) = result {
+                    client.startup_failed(&format!("核心初始化任务异常结束：{error}"));
                 }
-                handle.state::<DesktopState>().ready.send_replace(true);
                 if !startup || activation.swap(false, Ordering::AcqRel) {
                     let app = handle.clone();
                     let _ = handle.run_on_main_thread(move || desktop::restore(&app));

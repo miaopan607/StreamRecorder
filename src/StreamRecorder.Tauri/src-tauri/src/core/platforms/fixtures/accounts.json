@@ -1,0 +1,337 @@
+[
+  {
+    "platform": "pandalive",
+    "url": "https://www.pandalive.co.kr/play/user",
+    "live": [
+      {
+        "path": "/v1/member/bj",
+        "body": "{\"bjInfo\":{\"id\":\"user\",\"nick\":\"主播\"},\"media\":{}}"
+      },
+      {
+        "path": "/v1/live/play",
+        "body": "{\"PlayList\":{\"hls\":[{\"url\":\"https://media.example/master.m3u8\"}]}}"
+      },
+      {
+        "path": "/master.m3u8",
+        "body": "#EXTM3U\n#EXT-X-STREAM-INF:BANDWIDTH=9000000,RESOLUTION=1920x1080\nhttps://media.example/high.m3u8\n#EXT-X-STREAM-INF:BANDWIDTH=1000000,RESOLUTION=640x360\nhttps://media.example/low.m3u8\n"
+      }
+    ],
+    "offline": [
+      {
+        "path": "/v1/member/bj",
+        "body": "{\"bjInfo\":{\"id\":\"user\",\"nick\":\"主播\"}}"
+      }
+    ],
+    "expected_live": {
+      "is_live": true,
+      "anchor_name": "主播-user",
+      "record_url": "https://media.example/high.m3u8",
+      "m3u8_url": "https://media.example/master.m3u8"
+    },
+    "expected_offline": {
+      "is_live": false,
+      "anchor_name": "主播-user"
+    },
+    "expected_ld": {
+      "is_live": true,
+      "anchor_name": "主播-user",
+      "record_url": "https://media.example/low.m3u8",
+      "m3u8_url": "https://media.example/master.m3u8"
+    }
+  },
+  {
+    "platform": "winktv",
+    "url": "https://www.winktv.co.kr/play/user",
+    "live": [
+      {
+        "path": "/v1/member/bj",
+        "body": "{\"bjInfo\":{\"id\":\"user\",\"nick\":\"主播\"},\"media\":{}}"
+      },
+      {
+        "path": "/v1/live/play",
+        "body": "{\"PlayList\":{\"hls\":[{\"url\":\"https://media.example/master.m3u8\"}]}}"
+      },
+      {
+        "path": "/master.m3u8",
+        "body": "#EXTM3U\n#EXT-X-STREAM-INF:BANDWIDTH=9000000,RESOLUTION=1920x1080\nhttps://media.example/high.m3u8\n#EXT-X-STREAM-INF:BANDWIDTH=1000000,RESOLUTION=640x360\nhttps://media.example/low.m3u8\n"
+      }
+    ],
+    "offline": [
+      {
+        "path": "/v1/member/bj",
+        "body": "{\"bjInfo\":{\"id\":\"user\",\"nick\":\"主播\"}}"
+      }
+    ],
+    "expected_live": {
+      "is_live": true,
+      "anchor_name": "主播-user",
+      "record_url": "https://media.example/high.m3u8",
+      "m3u8_url": "https://media.example/master.m3u8"
+    },
+    "expected_offline": {
+      "is_live": false,
+      "anchor_name": "主播-user"
+    },
+    "expected_ld": {
+      "is_live": true,
+      "anchor_name": "主播-user",
+      "record_url": "https://media.example/low.m3u8",
+      "m3u8_url": "https://media.example/master.m3u8"
+    }
+  },
+  {
+    "platform": "piaopiao",
+    "url": "https://m.pp.weimipopo.com/live?anchorUid=10001",
+    "live": [
+      {
+        "path": "/live/preview",
+        "body": "{\"data\":{\"name\":\"主播\",\"living\":true,\"pullUrl\":\"https://media.example/master.m3u8\"}}"
+      }
+    ],
+    "offline": [
+      {
+        "path": "/live/preview",
+        "body": "{\"data\":{\"name\":\"主播\",\"living\":false}}"
+      }
+    ],
+    "expected_live": {
+      "is_live": true,
+      "anchor_name": "主播",
+      "record_url": "https://media.example/master.m3u8"
+    },
+    "expected_offline": {
+      "is_live": false,
+      "anchor_name": "主播"
+    }
+  },
+  {
+    "platform": "catshow",
+    "url": "https://h.catshow168.com/live?anchorUid=10001",
+    "live": [
+      {
+        "path": "/live/preview",
+        "body": "{\"data\":{\"name\":\"主播\",\"living\":true,\"pullUrl\":\"https://media.example/master.m3u8\"}}"
+      }
+    ],
+    "offline": [
+      {
+        "path": "/live/preview",
+        "body": "{\"data\":{\"name\":\"主播\",\"living\":false}}"
+      }
+    ],
+    "expected_live": {
+      "is_live": true,
+      "anchor_name": "主播",
+      "record_url": "https://media.example/master.m3u8"
+    },
+    "expected_offline": {
+      "is_live": false,
+      "anchor_name": "主播"
+    }
+  },
+  {
+    "platform": "6room",
+    "url": "https://v.6.cn/10001",
+    "live": [
+      {
+        "path": "/10001",
+        "body": "rid: '12345',\n roomid"
+      },
+      {
+        "path": "/coop/mobile/index.php",
+        "body": "{\"content\":{\"roominfo\":{\"alias\":\"主播\"},\"liveinfo\":{\"flvtitle\":\"live\"}}}"
+      }
+    ],
+    "offline": [
+      {
+        "path": "/10001",
+        "body": "rid: '12345',\n roomid"
+      },
+      {
+        "path": "/coop/mobile/index.php",
+        "body": "{\"content\":{\"roominfo\":{\"alias\":\"主播\"},\"liveinfo\":{\"flvtitle\":\"\"}}}"
+      }
+    ],
+    "expected_live": {
+      "is_live": true,
+      "anchor_name": "主播",
+      "record_url": "https://wlive.6rooms.com/httpflv/live.flv"
+    },
+    "expected_offline": {
+      "is_live": false,
+      "anchor_name": "主播"
+    }
+  },
+  {
+    "platform": "flextv",
+    "url": "https://www.ttinglive.com/channels/user/live",
+    "live": [
+      {
+        "path": "/channels/user/live",
+        "body": "<script id=\"__NEXT_DATA__\" type=\"application/json\">{\"props\": {\"pageProps\": {\"channelStream\": {\"channel\": {\"owner\": {\"nickname\": \"主播\", \"loginId\": \"user\"}}}}}}</script>"
+      },
+      {
+        "path": "/api/channels/user/stream",
+        "body": "{\"sources\":[{\"url\":\"https://media.example/master.m3u8\"}]}"
+      },
+      {
+        "path": "/master.m3u8",
+        "body": "#EXTM3U\n#EXT-X-STREAM-INF:BANDWIDTH=9000000,RESOLUTION=1920x1080\nhttps://media.example/high.m3u8\n#EXT-X-STREAM-INF:BANDWIDTH=1000000,RESOLUTION=640x360\nhttps://media.example/low.m3u8\n"
+      }
+    ],
+    "offline": [
+      {
+        "path": "/channels/user/live",
+        "body": "<script id=\"__NEXT_DATA__\" type=\"application/json\">{\"props\": {\"pageProps\": {\"channelStream\": {\"channel\": {\"message\": \"offline\"}}}}}</script>"
+      },
+      {
+        "path": "/channels/user",
+        "body": "<meta name=\"twitter:title\" content=\"主播의"
+      }
+    ],
+    "expected_live": {
+      "is_live": true,
+      "anchor_name": "主播-user",
+      "record_url": "https://media.example/high.m3u8",
+      "m3u8_url": "https://media.example/master.m3u8"
+    },
+    "expected_offline": {
+      "is_live": false,
+      "anchor_name": "主播"
+    },
+    "expected_ld": {
+      "is_live": true,
+      "anchor_name": "主播-user",
+      "record_url": "https://media.example/low.m3u8",
+      "m3u8_url": "https://media.example/master.m3u8"
+    }
+  },
+  {
+    "platform": "soop",
+    "url": "https://play.sooplive.co.kr/user",
+    "live": [
+      {
+        "path": "/api/get_station_status.php",
+        "body": "{\"DATA\":{\"user_nick\":\"主播\"}}"
+      },
+      {
+        "path": "/afreeca/player_live_api.php",
+        "body": "{\"CHANNEL\":{\"AID\":\"fixture-aid\"}}",
+        "body_contains": "type=aid"
+      },
+      {
+        "path": "/afreeca/player_live_api.php",
+        "body": "{\"CHANNEL\":{\"RESULT\":1,\"VIEWPRESET\":true,\"TITLE\":\"标题\",\"BNO\":123}}"
+      },
+      {
+        "path": "/broad_stream_assign.html",
+        "body": "{\"view_url\":\"https://media.example/master.m3u8\"}"
+      },
+      {
+        "path": "/master.m3u8",
+        "body": "#EXTM3U\n#EXT-X-STREAM-INF:BANDWIDTH=9000000,RESOLUTION=1920x1080\nhttps://media.example/high.m3u8\n#EXT-X-STREAM-INF:BANDWIDTH=1000000,RESOLUTION=640x360\nhttps://media.example/low.m3u8\n"
+      }
+    ],
+    "offline": [
+      {
+        "path": "/api/get_station_status.php",
+        "body": "{\"DATA\":{\"user_nick\":\"主播\"}}"
+      },
+      {
+        "path": "/afreeca/player_live_api.php",
+        "body": "{\"CHANNEL\":{\"RESULT\":0,\"VIEWPRESET\":false}}"
+      }
+    ],
+    "expected_live": {
+      "is_live": true,
+      "anchor_name": "主播-user",
+      "title": "标题",
+      "record_url": "https://media.example/high.m3u8",
+      "m3u8_url": "https://media.example/master.m3u8?aid=fixture-aid"
+    },
+    "expected_offline": {
+      "is_live": false,
+      "anchor_name": "主播-user"
+    },
+    "expected_ld": {
+      "is_live": true,
+      "anchor_name": "主播-user",
+      "title": "标题",
+      "record_url": "https://media.example/low.m3u8",
+      "m3u8_url": "https://media.example/master.m3u8?aid=fixture-aid"
+    }
+  },
+  {
+    "platform": "popkontv",
+    "url": "https://www.popkontv.com/live/view?castId=user&partnerCode=P-10001",
+    "live": [
+      {
+        "path": "/api/proxy/broadcast/v1.1/search/all",
+        "body": "{\"data\":{\"broadCastList\":[{\"mcSignId\":\"user\",\"nickName\":\"主播\",\"mcPartnerCode\":\"P-10001\"}]}}"
+      },
+      {
+        "path": "/live/view",
+        "body": "<script id=\"__NEXT_DATA__\" type=\"application/json\">{\"props\": {\"pageProps\": {\"mcData\": {\"data\": {\"mc_isPrivate\": 0, \"mc_castStartDate\": \"123456\", \"mc_signId\": \"user\", \"castType\": 1}}}}}</script>"
+      },
+      {
+        "path": "/api/proxy/broadcast/v1/castwatchonoffguest",
+        "body": "{\"statusCd\":\"L0000\",\"statusMsg\":\"SUCEESS\",\"data\":{\"castHlsUrl\":\"https://media.example/master.m3u8\"}}"
+      }
+    ],
+    "offline": [
+      {
+        "path": "/api/proxy/broadcast/v1.1/search/all",
+        "body": "{\"data\":{\"broadCastList\":[{\"mcSignId\":\"user\",\"nickName\":\"主播\",\"mcPartnerCode\":\"P-10001\"}]}}"
+      },
+      {
+        "path": "/live/view",
+        "body": "<script id=\"__NEXT_DATA__\" type=\"application/json\">{\"props\": {\"pageProps\": {}}}</script>"
+      }
+    ],
+    "expected_live": {
+      "is_live": true,
+      "anchor_name": "主播-user",
+      "record_url": "https://media.example/master.m3u8"
+    },
+    "expected_offline": {
+      "is_live": false,
+      "anchor_name": "主播-user"
+    }
+  },
+  {
+    "platform": "twitcasting",
+    "url": "https://twitcasting.tv/user",
+    "live": [
+      {
+        "path": "/user",
+        "body": "<title>主播 (@user)  的直播 - Twit</title><meta name=\"twitter:title\" content=\"标题\">\n <meta data-is-onlive=\"true\"\n data-view-mode data-movie-id=\"123\" data-audience-id"
+      },
+      {
+        "path": "/streamserver.php",
+        "body": "{\"tc-hls\":{\"streams\":{\"high\":\"https://media.example/high.m3u8\",\"low\":\"https://media.example/low.m3u8\"}}}"
+      }
+    ],
+    "offline": [
+      {
+        "path": "/user",
+        "body": "<title>主播 (@user)  的直播 - Twit</title><meta name=\"twitter:title\" content=\"标题\">\n <meta data-is-onlive=\"false\"\n data-view-mode data-movie-id=\"123\" data-audience-id"
+      }
+    ],
+    "expected_live": {
+      "is_live": true,
+      "anchor_name": "主播-user-123",
+      "title": "标题",
+      "record_url": "https://media.example/high.m3u8"
+    },
+    "expected_offline": {
+      "is_live": false,
+      "anchor_name": "主播-user-123"
+    },
+    "expected_ld": {
+      "is_live": true,
+      "anchor_name": "主播-user-123",
+      "title": "标题",
+      "record_url": "https://media.example/low.m3u8"
+    }
+  }
+]
