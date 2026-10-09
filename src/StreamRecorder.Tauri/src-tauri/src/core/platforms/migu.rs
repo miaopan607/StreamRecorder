@@ -55,7 +55,7 @@ pub(super) async fn probe(ctx: &ProbeContext, input: &ProbeInput) -> Result<Stre
     }
     let mut url = field(&info, "/body/urlInfo/url")?;
     // 当前 SDK 对没有 puData 的普通直链不执行 WASM；不制造空 ddCalcu。
-    if query(&url, "puData").is_ok_and(|value| !value.is_empty()) {
+    if query(&url, "puData").is_ok() {
         let settings = ctx
             .json(
                 "https://app-sc.miguvideo.com/common/v1/settings/H5_DetailPage",

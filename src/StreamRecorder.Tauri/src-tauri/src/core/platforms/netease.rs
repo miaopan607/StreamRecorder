@@ -12,16 +12,21 @@ pub(super) async fn probe(ctx: &ProbeContext, input: &ProbeInput) -> Result<Stre
     )?)?;
     let room = at(&json, "/props/pageProps/roomInfoInitData")?;
     let live = at(room, "/live")?;
+    let status = at(live, "/status")?
+        .as_i64()
+        .ok_or("网易CC页面缺少有效直播状态")?;
     let name = live
         .get("nickname")
         .or_else(|| room.get("nickname"))
-        .ok_or("平台响应缺少昵称")?;
+        .filter(|name| !name.is_null())
+        .map(text);
     let mut data = StreamData::new(
         input,
         "网易CC直播",
-        text(name),
-        live.get("status").and_then(serde_json::Value::as_i64) == Some(1),
+        String::new(),
+        status == 1,
     );
+    data.anchor_name = name;
     data.live_url = Some(url);
     if data.is_live {
         data.title = Some(field(live, "/title")?);

@@ -1,4 +1,9 @@
-use super::super::probe::{ProbeInput, ProbeService};
+use super::super::{
+    models::{JobInput, ERROR, MONITORING},
+    probe::{encode, query, ProbeInput, ProbeService, StreamData},
+    CoreService,
+};
+use crate::paths::ProjectPaths;
 use serde::Deserialize;
 use serde_json::Value;
 use std::{
@@ -26,9 +31,31 @@ struct Reply {
     body_contains: String,
     #[serde(default)]
     request_contains: String,
+    #[serde(default)]
+    query_json: BTreeMap<String, Value>,
 }
 fn success() -> u16 {
     200
+}
+
+#[test]
+fn compatibility_query_empty_values() {
+    assert!(query("https://example.org/live", "id").is_err());
+    assert!(query("https://example.org/live?id", "id").is_err());
+    assert!(query("https://example.org/live?id=", "id").is_err());
+    assert_eq!(
+        query("https://example.org/live?id=&id=10001&id=20002", "id").unwrap(),
+        "10001"
+    );
+    assert_eq!(
+        query("https://example.org/live?id=%20", "id").unwrap(),
+        " "
+    );
+    assert_eq!(
+        query("https://example.org/live?id=%E4%B8%AD%E6%96%87", "id").unwrap(),
+        "中文"
+    );
+    assert!(query("https://example.org/live?ID=10001", "id").is_err());
 }
 #[derive(Deserialize)]
 struct Fixture {
@@ -98,7 +125,20 @@ impl Server {
                 }
                 let body = String::from_utf8_lossy(&body);
                 let reply = replies.iter().find(|reply| {
+                    let query_matches = reply.query_json.iter().all(|(expected_key, expected)| {
+                        target
+                            .split_once('?')
+                            .into_iter()
+                            .flat_map(|(_, query)| url::form_urlencoded::parse(query.as_bytes()))
+                            .any(|(key, value)| {
+                                let value = value.into_owned();
+                                let actual = serde_json::from_str::<Value>(&value)
+                                    .unwrap_or(Value::String(value));
+                                key == expected_key.as_str() && &actual == expected
+                            })
+                    });
                     reply.path == path
+                        && query_matches
                         && (reply.body_contains.is_empty() || body.contains(&reply.body_contains))
                         && (reply.request_contains.is_empty()
                             || request_headers.contains(&reply.request_contains))
@@ -269,6 +309,7 @@ fn reply(path: &str, body: &str) -> Reply {
         headers: BTreeMap::new(),
         body_contains: String::new(),
         request_contains: String::new(),
+        query_json: BTreeMap::new(),
     }
 }
 fn account_fixture(key: &str) -> Fixture {
@@ -280,6 +321,431 @@ fn account_fixture(key: &str) -> Fixture {
 }
 fn next_page(value: Value) -> String {
     format!("<script id=\"__NEXT_DATA__\" type=\"application/json\">{value}</script>")
+}
+
+fn rednote_page(id: &str, nickname: Option<&str>) -> String {
+    let flv = format!("http://live-source-play.xhscdn.com/live/{id}.flv");
+    let mut deeplink = format!("xhsdiscover://live?flvUrl={}", encode(&flv));
+    if let Some(nickname) = nickname {
+        deeplink.push_str("&host_nickname=");
+        deeplink.push_str(&encode(nickname));
+    }
+    let state = serde_json::json!({
+        "liveStream": {
+            "liveStatus": "success",
+            "roomData": {
+                "roomInfo": {
+                    "roomTitle": "直播标题",
+                    "deeplink": deeplink
+                }
+            }
+        }
+    });
+    format!("<script>window.__INITIAL_STATE__={state}</script>")
+}
+
+async fn run_probe(
+    platform: &str,
+    live_url: &str,
+    routes: Vec<Reply>,
+) -> Result<StreamData, String> {
+    let server = Server::new(routes);
+    let service = ProbeService::default();
+    *service.endpoint.lock() = Some(format!("http://{}", server.address));
+    service
+        .probe(
+            ProbeInput {
+                platform_key: platform.into(),
+                live_url: live_url.into(),
+                quality: "OD".into(),
+                ..ProbeInput::default()
+            },
+            CancellationToken::new(),
+        )
+        .await
+}
+
+#[tokio::test]
+async fn compatibility_offline_netease_missing_nicknames() {
+    let body = format!(
+        "<script id=\"__NEXT_DATA__\" type=\"application/json\" crossorigin=\"anonymous\">{}</script></body>",
+        serde_json::json!({"props":{"pageProps":{"roomInfoInitData":{"live":{"status":0}}}}})
+    );
+    let data = run_probe(
+        "netease",
+        "https://cc.163.com/10001",
+        vec![reply("/10001/", &body)],
+    ).await.unwrap();
+    assert!(!data.is_live);
+    assert_eq!(data.anchor_name, None);
+    assert_eq!(data.record_url, None);
+
+    for live in [serde_json::json!({}), serde_json::json!({"status":null}), serde_json::json!({"status":"unknown"})] {
+        let body = format!(
+            "<script id=\"__NEXT_DATA__\" type=\"application/json\" crossorigin=\"anonymous\">{}</script></body>",
+            serde_json::json!({"props":{"pageProps":{"roomInfoInitData":{"live":live}}}})
+        );
+        assert!(run_probe(
+            "netease", "https://cc.163.com/10001", vec![reply("/10001/", &body)],
+        ).await.is_err());
+    }
+}
+
+#[tokio::test]
+async fn compatibility_offline_sixroom_null_stream_title() {
+    let body = serde_json::json!({
+        "content": {"liveinfo":{"flvtitle":null},"roominfo":{"alias":"当前主播"}}
+    }).to_string();
+    let routes = vec![
+        reply("/10001", "rid: '10001',\n roomid"),
+        reply("/coop/mobile/index.php", &body),
+    ];
+    let data = run_probe("6room", "https://v.6.cn/10001", routes).await.unwrap();
+    assert!(!data.is_live);
+    assert_eq!(data.anchor_name.as_deref(), Some("当前主播"));
+    assert_eq!(data.record_url, None);
+
+    let body = serde_json::json!({"content":{"liveinfo":{},"roominfo":{"alias":"当前主播"}}}).to_string();
+    assert!(run_probe("6room", "https://v.6.cn/10001", vec![
+        reply("/10001", "rid: '10001',\n roomid"),
+        reply("/coop/mobile/index.php", &body),
+    ]).await.is_err());
+}
+
+#[tokio::test]
+async fn compatibility_offline_vvxq_null_name_uses_secondary_profile() {
+    let routes = vec![
+        reply("/room/video/getRoomData.do", r#"{"status":0}"#),
+        reply("/activity-center/fanclub/activity/captain/banner", r#"{"data":{"anchorName":null}}"#),
+        reply("/activity-center/halloween2023/banner", r#"{"data":{"memberVO":{"memberName":"回退主播"}}}"#),
+    ];
+    let data = run_probe(
+        "vvxq", "https://h5webcdn-pro.vvxqiu.com/?roomId=10001", routes,
+    ).await.unwrap();
+    assert!(!data.is_live);
+    assert_eq!(data.anchor_name.as_deref(), Some("回退主播"));
+    assert_eq!(data.record_url, None);
+
+    assert!(run_probe(
+        "vvxq", "https://h5webcdn-pro.vvxqiu.com/?roomId=10001", vec![
+            reply("/room/video/getRoomData.do", r#"{"status":0}"#),
+            reply("/activity-center/fanclub/activity/captain/banner", r#"{"data":{}}"#),
+            reply("/activity-center/halloween2023/banner", r#"{"data":{"memberVO":{"memberName":"回退主播"}}}"#),
+        ],
+    ).await.is_err());
+}
+
+#[tokio::test]
+async fn compatibility_offline_bigo_null_nickname() {
+    let data = run_probe(
+        "bigo", "https://www.bigo.tv/10001", vec![reply(
+            "/official_website/studio/getInternalStudioInfo", r#"{"data":{"alive":0,"nick_name":null}}"#,
+        )],
+    ).await.unwrap();
+    assert!(!data.is_live);
+    assert_eq!(data.anchor_name, None);
+    assert_eq!(data.record_url, None);
+    // 显式空字符串仍应走旧主页昵称回退；null 不应触发这条请求。
+    let data = run_probe(
+        "bigo", "https://www.bigo.tv/sg/10001", vec![
+            reply("/official_website/studio/getInternalStudioInfo", r#"{"data":{"alive":0,"nick_name":""}}"#),
+            reply("/sg/10001", "<title>欢迎来到主页主播的直播间</title>"),
+        ],
+    ).await.unwrap();
+    assert!(!data.is_live);
+    assert_eq!(data.anchor_name.as_deref(), Some("主页主播"));
+
+    assert!(run_probe(
+        "bigo", "https://www.bigo.tv/10001", vec![reply(
+            "/official_website/studio/getInternalStudioInfo", r#"{"data":{"alive":0}}"#,
+        )],
+    ).await.is_err());
+}
+
+#[tokio::test]
+async fn compatibility_offline_showroom_null_room_name() {
+    let data = run_probe(
+        "showroom", "https://www.showroom-live.com/room/profile?room_id=10001", vec![reply(
+            "/api/live/live_info", r#"{"live_status":0,"room_name":null}"#,
+        )],
+    ).await.unwrap();
+    assert!(!data.is_live);
+    assert_eq!(data.anchor_name, None);
+    assert_eq!(data.record_url, None);
+
+    assert!(run_probe(
+        "showroom", "https://www.showroom-live.com/room/profile?room_id=10001", vec![reply(
+            "/api/live/live_info", r#"{"live_status":0}"#,
+        )],
+    ).await.is_err());
+}
+
+fn taobao_routes(expected_id: &str) -> Vec<Reply> {
+    let fixture = serde_json::from_str::<Vec<Fixture>>(CORPORA[4])
+        .unwrap()
+        .into_iter()
+        .find(|fixture| fixture.platform == "taobao")
+        .unwrap();
+    let mut api = fixture
+        .live
+        .into_iter()
+        .find(|route| route.path == "/h5/mtop.mediaplatform.live.livedetail/4.0/")
+        .unwrap();
+    api.query_json.insert(
+        "data".into(),
+        serde_json::json!({"liveId":expected_id,"creatorId":null}),
+    );
+    vec![api]
+}
+
+#[tokio::test]
+async fn compatibility_taobao_empty_id() {
+    for url in [
+        "https://tb.cn/live?id=&liveId=10001",
+        "https://tb.cn/live?id=10001&liveId=20002",
+    ] {
+        let data = run_probe("taobao", url, taobao_routes("10001"))
+            .await
+            .unwrap();
+        assert!(data.is_live);
+        assert_eq!(
+            data.record_url.as_deref(),
+            Some("https://media.example/high.m3u8")
+        );
+    }
+
+    let page = reply(
+        "/legacy",
+        "var url = 'https://tbzb.taobao.com/live?id=&liveId=10001';",
+    );
+    let mut routes = vec![page];
+    routes.extend(taobao_routes("10001"));
+    let data = run_probe(
+        "taobao",
+        "https://tb.cn/legacy?id=&liveId=",
+        routes,
+    )
+    .await
+    .unwrap();
+    assert!(data.is_live);
+    assert_eq!(
+        data.record_url.as_deref(),
+        Some("https://media.example/high.m3u8")
+    );
+}
+
+#[tokio::test]
+async fn compatibility_jd_empty_author_id_uses_room_fragment() {
+    let mut redirect = reply("/s/10001", "");
+    redirect.status = 302;
+    redirect.headers.insert(
+        "Location".into(),
+        "https://lives.jd.com/live?authorId=#/10001?origin=fixture".into(),
+    );
+    let mut play = reply(
+        "/client.action",
+        r#"{"data":{"status":1,"videoUrl":"https://media.example/live.flv","h5VideoUrl":"https://media.example/master.m3u8"}}"#,
+    );
+    play.query_json
+        .insert("body".into(), serde_json::json!({"liveId":"10001"}));
+    let data = run_probe(
+        "jd",
+        "https://3.cn/s/10001",
+        vec![redirect, reply("/live", ""), play],
+    )
+    .await
+    .unwrap();
+    assert!(data.is_live);
+    assert_eq!(data.anchor_name.as_deref(), Some("jd_10001"));
+    assert_eq!(
+        data.record_url.as_deref(),
+        Some("https://media.example/master.m3u8")
+    );
+}
+
+#[tokio::test]
+async fn compatibility_rednote_legacy_links() {
+    let data = run_probe(
+        "xiaohongshu",
+        "https://www.xiaohongshu.com/livestream/10001",
+        vec![reply(
+            "/livestream/10001",
+            &rednote_page("10001", Some("主播")),
+        )],
+    )
+    .await
+    .unwrap();
+    assert!(data.is_live);
+    assert_eq!(data.anchor_name.as_deref(), Some("主播"));
+    assert_eq!(
+        data.record_url.as_deref(),
+        Some("http://live-source-play.xhscdn.com/live/10001.flv")
+    );
+
+    let mut short_link = reply("/share/10002", "");
+    short_link.status = 302;
+    short_link.headers.insert(
+        "Location".into(),
+        "https://www.xiaohongshu.com/livestream/10002".into(),
+    );
+    let data = run_probe(
+        "xhs",
+        "https://xhslink.com/share/10002",
+        vec![
+            short_link,
+            reply("/livestream/10002", &rednote_page("10002", None)),
+        ],
+    )
+    .await
+    .unwrap();
+    assert!(data.is_live);
+    assert_eq!(data.anchor_name, None);
+    assert_eq!(
+        data.live_url.as_deref(),
+        Some("https://www.xiaohongshu.com/livestream/10002")
+    );
+    assert_eq!(
+        data.record_url.as_deref(),
+        Some("http://live-source-play.xhscdn.com/live/10002.flv")
+    );
+
+    let data = run_probe(
+        "xiaohongshu",
+        "https://www.xiaohongshu.com/user/profile/10003",
+        vec![reply(
+            "/user/profile/10003",
+            &rednote_page("10003", Some("")),
+        )],
+    )
+    .await
+    .unwrap();
+    assert!(data.is_live);
+    assert_eq!(data.anchor_name, None);
+    assert_eq!(
+        data.record_url.as_deref(),
+        Some("http://live-source-play.xhscdn.com/live/10003.flv")
+    );
+}
+
+#[tokio::test]
+async fn compatibility_rednote_ended_room_does_not_follow_recommendation() {
+    // 真实直播页的下播结构同时带有推荐直播，不能把推荐房间作为当前任务。
+    let state = serde_json::json!({
+        "liveStream": {
+            "pageStatus": "success",
+            "liveStatus": "end",
+            "roomData": {
+                "hostInfo": {"nickName": "当前主播"},
+                "roomInfo": {"status": 3, "roomTitle": "当前直播已结束"}
+            },
+            "nextRoomInfo": {
+                "nickName": "推荐主播",
+                "roomId": "20004",
+                "deeplink": "xhsdiscover://live?host_nickname=推荐主播&flvUrl=http%3A%2F%2Flive-source-play.xhscdn.com%2Flive%2F20004.flv"
+            }
+        }
+    });
+    let body = format!("<script>window.__INITIAL_STATE__={state}</script>");
+    let data = run_probe(
+        "xiaohongshu",
+        "https://www.xiaohongshu.com/livestream/10004",
+        vec![reply("/livestream/10004", &body)],
+    )
+    .await
+    .unwrap();
+    assert!(!data.is_live);
+    assert_eq!(data.anchor_name.as_deref(), Some("当前主播"));
+    assert_eq!(data.title.as_deref(), Some("当前直播已结束"));
+    assert!(data.record_url.is_none());
+    assert!(data.m3u8_url.is_none());
+    assert!(data.flv_url.is_none());
+
+    for pointer in ["/liveStream/pageStatus", "/liveStream/roomData/roomInfo/status"] {
+        let mut invalid = state.clone();
+        *invalid.pointer_mut(pointer).unwrap() = Value::Null;
+        let body = format!("<script>window.__INITIAL_STATE__={invalid}</script>");
+        assert!(run_probe(
+            "xiaohongshu",
+            "https://www.xiaohongshu.com/livestream/10004",
+            vec![reply("/livestream/10004", &body)],
+        )
+        .await
+        .is_err());
+    }
+}
+
+#[tokio::test]
+async fn compatibility_rednote_invalid_pages_remain_errors() {
+    for body in [
+        "<html>not a RedNote room</html>".into(),
+        "<script>window.__INITIAL_STATE__={broken}</script>".into(),
+        format!(
+            "<script>window.__INITIAL_STATE__={}</script>",
+            serde_json::json!({"liveStream":{"liveStatus":"success","roomData":{"roomInfo":{"roomTitle":"直播标题","deeplink":"xhsdiscover://live?host_nickname=主播"}}}})
+        ),
+    ] {
+        assert!(run_probe(
+            "xiaohongshu",
+            "https://www.xiaohongshu.com/livestream/without-host-id",
+            vec![reply("/livestream/without-host-id", &body)],
+        )
+        .await
+        .is_err());
+    }
+
+    let data = run_probe(
+        "xiaohongshu",
+        "https://www.xiaohongshu.com/user/profile/10003",
+        vec![reply(
+            "/user/profile/10003",
+            "<title>@主播 的个人主页</title>",
+        )],
+    )
+    .await
+    .unwrap();
+    assert!(!data.is_live);
+    assert_eq!(data.anchor_name.as_deref(), Some("主播"));
+}
+
+#[tokio::test]
+async fn compatibility_rednote_preserves_configured_name() {
+    let directory = tempfile::tempdir().unwrap();
+    let server = Server::new(vec![reply(
+        "/livestream/10002",
+        &rednote_page("10002", None),
+    )]);
+    let core = CoreService::new(ProjectPaths::at(directory.path().to_owned()), None);
+    *core.probe.endpoint.lock() = Some(format!("http://{}", server.address));
+    core.start().await.unwrap();
+    let mut settings = core.snapshot().settings;
+    settings.only_notify_no_record = true;
+    settings.system_notification_enabled = false;
+    core.settings_update(settings).await.unwrap();
+    let id = core
+        .jobs_upsert(vec![JobInput {
+            url: "https://www.xiaohongshu.com/livestream/10002".into(),
+            streamer_name: "原配置主播".into(),
+            ..JobInput::default()
+        }])
+        .await
+        .unwrap()
+        .changed_ids[0]
+        .clone();
+    tokio::time::timeout(Duration::from_secs(10), async {
+        loop {
+            let job = core.job(&id).unwrap();
+            assert_ne!(job.status_info, ERROR, "{}", job.error_message);
+            if job.status_info == MONITORING {
+                assert_eq!(job.input.streamer_name, "原配置主播");
+                assert_eq!(job.live_title, "直播标题");
+                break;
+            }
+            tokio::time::sleep(Duration::from_millis(20)).await;
+        }
+    })
+    .await
+    .unwrap();
+    core.shutdown().await;
 }
 #[tokio::test]
 async fn failed_logins_are_not_reported_as_offline() {

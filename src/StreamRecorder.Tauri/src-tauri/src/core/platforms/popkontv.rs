@@ -56,7 +56,7 @@ pub(super) async fn probe(ctx: &ProbeContext, input: &ProbeInput) -> Result<Stre
         .parse::<i64>()
         .map_err(|_| "PopkonTV 私密状态无效".to_string())?;
     let password = query(&input.live_url, "pwd").ok();
-    if private != 0 && password.as_deref().is_none_or(str::is_empty) {
+    if private != 0 && password.is_none() {
         return Err("PopkonTV 私密房间需要房间密码".into());
     }
     let mut date = field(room, "/mc_castStartDate")?;

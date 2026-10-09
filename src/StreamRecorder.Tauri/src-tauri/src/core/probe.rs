@@ -492,7 +492,7 @@ pub fn query(url: &str, key: &str) -> Result<String, String> {
     Url::parse(url)
         .map_err(|_| "直播 URL 无效".to_string())?
         .query_pairs()
-        .find(|(k, _)| k == key)
+        .find(|(k, v)| k == key && !v.is_empty())
         .map(|(_, v)| v.into_owned())
         .ok_or_else(|| format!("直播 URL 缺少 {key}"))
 }

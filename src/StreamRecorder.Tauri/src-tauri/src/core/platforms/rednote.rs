@@ -18,12 +18,29 @@ pub(super) async fn probe(ctx: &ProbeContext, input: &ProbeInput) -> Result<Stre
     } else {
         input.live_url.clone()
     };
-    let id = capture(r"/user/profile/([^/?]+)", &url).or_else(|_| query(&url, "host_id"))?;
     let html = ctx.get(&url, &headers).await?;
     let mut data = StreamData::new(input, "小红书", String::new(), false);
     data.live_url = Some(url);
     if let Ok(raw) = capture(r"<script>window.__INITIAL_STATE__=(.*?)</script>", &html) {
         let info = parse_json(&raw.replace("undefined", "null"))?;
+        // 下播页已明确给出当前房间状态；nextRoomInfo 只是推荐直播，不能用于录制。
+        if info
+            .pointer("/liveStream/pageStatus")
+            .and_then(serde_json::Value::as_str)
+            == Some("success")
+            && info
+                .pointer("/liveStream/liveStatus")
+                .and_then(serde_json::Value::as_str)
+                == Some("end")
+            && info
+                .pointer("/liveStream/roomData/roomInfo/status")
+                .and_then(serde_json::Value::as_i64)
+                == Some(3)
+        {
+            data.anchor_name = Some(optional(&info, "/liveStream/roomData/hostInfo/nickName"));
+            data.title = Some(optional(&info, "/liveStream/roomData/roomInfo/roomTitle"));
+            return Ok(data);
+        }
         if info
             .pointer("/liveStream/liveStatus")
             .and_then(serde_json::Value::as_str)
@@ -39,7 +56,7 @@ pub(super) async fn probe(ctx: &ProbeContext, input: &ProbeInput) -> Result<Stre
                     .nth(1)
                     .and_then(|v| v.split('.').next())
                     .ok_or("小红书直播流 ID 缺失")?;
-                data.anchor_name = Some(query(&link, "host_nickname")?);
+                data.anchor_name = query(&link, "host_nickname").ok();
                 data.is_live = true;
                 data.title = Some(title);
                 data.urls(
@@ -51,6 +68,12 @@ pub(super) async fn probe(ctx: &ProbeContext, input: &ProbeInput) -> Result<Stre
             }
         }
     }
+    let resolved_url = data
+        .live_url
+        .as_deref()
+        .expect("小红书重定向 URL 已设置");
+    let id = capture(r"/user/profile/([^/?]+)", resolved_url)
+        .or_else(|_| query(resolved_url, "host_id"))?;
     let html = ctx
         .get(
             &format!("https://www.xiaohongshu.com/user/profile/{}", encode(&id)),

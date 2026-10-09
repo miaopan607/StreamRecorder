@@ -20,12 +20,14 @@ pub(super) async fn probe(ctx: &ProbeContext, input: &ProbeInput) -> Result<Stre
         )
         .await?;
     let info = at(&json, "/data")?;
+    let name = info.get("nick_name").ok_or("平台响应缺少字段 /nick_name")?;
     let mut data = StreamData::new(
         input,
         "Bigo",
-        field(info, "/nick_name")?,
+        String::new(),
         at(info, "/alive")?.as_i64() == Some(1),
     );
+    data.anchor_name = (!name.is_null()).then(|| text(name));
     if data.is_live {
         data.title = Some(field(info, "/roomTopic")?);
         data.urls(field(info, "/hls_src")?, String::new(), false);

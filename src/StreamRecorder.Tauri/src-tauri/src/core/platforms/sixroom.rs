@@ -29,7 +29,11 @@ pub(super) async fn probe(ctx: &ProbeContext, input: &ProbeInput) -> Result<Stre
             ]),
         )
         .await?;
-    let title = field(&info, "/content/liveinfo/flvtitle")?;
+    // 显式 null 表示没有直播流；字段缺失仍是响应错误。
+    let title = text(
+        info.pointer("/content/liveinfo/flvtitle")
+            .ok_or("平台响应缺少字段 /content/liveinfo/flvtitle")?,
+    );
     let mut data = StreamData::new(
         input,
         "六间房直播",

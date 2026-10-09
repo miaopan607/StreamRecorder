@@ -16,12 +16,14 @@ pub(super) async fn probe(ctx: &ProbeContext, input: &ProbeInput) -> Result<Stre
             Body::None,
         )
         .await?;
+    let name = info.get("room_name").ok_or("平台响应缺少字段 /room_name")?;
     let mut data = StreamData::new(
         input,
         "ShowRoom",
-        field(&info, "/room_name")?,
+        String::new(),
         at(&info, "/live_status")?.as_i64() == Some(2),
     );
+    data.anchor_name = (!name.is_null()).then(|| text(name));
     if data.is_live {
         let info=ctx.json(&format!("https://www.showroom-live.com/api/live/streaming_url?room_id={}&abr_available=1",encode(&id)),&[],Body::None).await?;
         let streams = array(at(&info, "/streaming_url_list")?)?;
