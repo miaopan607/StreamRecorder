@@ -81,7 +81,7 @@ npm.cmd run build
 cargo test --manifest-path .\src-tauri\Cargo.toml --bin StreamRecorder
 ```
 
-默认 Rust 套件不访问公网、不使用用户 runtime，也不要求 ffmpeg。平台测试通过真实 loopback HTTP 和生产解析路径，覆盖 51 个平台键的开播 / 未开播、支持的画质、畸形响应、登录失败与 Cookie 更新；签名使用独立上游向量校对。核心回归覆盖配置失败保持、探测取消、并发降限、stderr 洪泛、进程树回收和重复退出。
+默认 Rust 套件不访问公网、不使用用户 runtime，也不要求 ffmpeg。平台测试通过真实 loopback HTTP 和生产解析路径，覆盖 51 个平台键的开播 / 未开播、支持的画质、畸形响应、登录失败与 Cookie 更新；签名使用独立上游向量校对。核心回归覆盖配置失败保持、探测取消、并发降限、stderr 洪泛、进程树回收和重复退出。进程树测试的根进程与后代均以无控制台方式启动，仍验证自然退出与强制停止后的真实回收。
 
 从仓库根目录执行真实媒体验收：
 

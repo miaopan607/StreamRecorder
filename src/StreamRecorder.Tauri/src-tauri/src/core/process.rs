@@ -250,7 +250,18 @@ mod tests {
             let pid_path = directory.path().join("child.pid");
             let release_path = directory.path().join("release");
             let quote = |path: &std::path::Path| path.to_string_lossy().replace('\'', "''");
-            let script=format!("$p=Start-Process powershell.exe -ArgumentList '-NoProfile','-NonInteractive','-Command','Start-Sleep -Seconds 60' -PassThru;[IO.File]::WriteAllText('{}',[string]$p.Id);while(-not(Test-Path '{}')){{Start-Sleep -Milliseconds 10}};exit 7",quote(&pid_path),quote(&release_path));
+            // 后代也使用 CREATE_NO_WINDOW，避免默认终端启动与进程树回收发生竞争。
+            let script = format!(
+                "$start=New-Object System.Diagnostics.ProcessStartInfo;\
+                 $start.FileName=[Diagnostics.Process]::GetCurrentProcess().MainModule.FileName;\
+                 $start.Arguments='-NoProfile -NonInteractive -Command Start-Sleep -Seconds 60';\
+                 $start.UseShellExecute=$false;$start.CreateNoWindow=$true;\
+                 $p=[Diagnostics.Process]::Start($start);\
+                 [IO.File]::WriteAllText('{}',[string]$p.Id);\
+                 while(-not(Test-Path '{}')){{Start-Sleep -Milliseconds 10}};exit 7",
+                quote(&pid_path),
+                quote(&release_path),
+            );
             let process = ManagedProcess::spawn(&mut powershell(&script))
                 .await
                 .unwrap();
