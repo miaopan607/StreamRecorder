@@ -1,3 +1,5 @@
+> AI 垃圾
+
 # StreamRecorder
 
 Windows 直播录制工具，使用 **Tauri 2 + React + TypeScript** 界面和 **Rust 原生核心**。界面直接调用具体 Tauri 命令，启动引导返回完整快照，状态由带 revision 的事件更新；不再启动 Python worker，也不使用 stdio 业务协议。
