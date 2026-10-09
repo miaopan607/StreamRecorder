@@ -253,12 +253,16 @@ pub fn ffmpeg_command(
     if url.to_ascii_lowercase().starts_with("http://")
         || url.to_ascii_lowercase().starts_with("https://")
     {
-        // 网络断线仍可重连，但 ENDLIST 的 EOF 必须自然结束。
+        // 重试传输/连接故障与临时 HTTP 错误；正常 EOF 不重连，避免重播 HLS 分片。
         command.args([
             "-reconnect",
             "1",
             "-reconnect_streamed",
             "1",
+            "-reconnect_on_network_error",
+            "1",
+            "-reconnect_on_http_error",
+            "408,429,5xx",
             "-reconnect_delay_max",
             "15",
         ]);

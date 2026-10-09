@@ -88,10 +88,12 @@ cargo test --manifest-path .\src-tauri\Cargo.toml --bin StreamRecorder
 ```powershell
 $ffmpegBin = Join-Path $PWD 'artifacts\tauri-smoke-tools\ffmpeg\ffmpeg-9.0.2-essentials_build\bin'
 $env:PATH = "$ffmpegBin;$env:PATH"
-cargo test --manifest-path .\src\StreamRecorder.Tauri\src-tauri\Cargo.toml --bin StreamRecorder core::recording::tests::ffmpeg_smoke -- --ignored --nocapture --test-threads=1
+cargo test --manifest-path .\src\StreamRecorder.Tauri\src-tauri\Cargo.toml --bin StreamRecorder core::recording::tests -- --ignored --nocapture --test-threads=1
 ```
 
 CoreService 的真实录制烟测已通过有限 HTTP HLS、持续 HTTP FLV、TS/FLV/MKV/MOV/MP4/MP3/M4A、12 个 TS 分段及转 MP4，输出由 ffprobe 检查。同次有限 HLS 录制只请求一次首分片；慢探测和失效 webhook 下仍可保存、ping 和停止。
+
+HTTP 录制重试传输中断、TCP/TLS 连接错误及 HTTP 408、429、5xx；401/403 等非临时错误不重试。不启用 `reconnect_at_eof`，完整 HLS 分片和有限媒体读到 EOF 后正常结束。真实重连烟测覆盖首次 503 后恢复、FLV 响应中途截断后续传、有限 FLV 自然结束、403 不重试，以及连接拒绝后服务恢复；恢复后的媒体时长由 ffprobe 检查。无长度信息的 HTTP 流正常关闭连接时，单凭 EOF 无法区分下播与断线，仍按 EOF 结束，不进行盲目重连。
 
 正式 EXE 已在中文空格便携目录中通过原生 Windows UIA 验收，应用 PATH 仅包含 ffmpeg、System32 和 Windows。实际操作覆盖添加 / 删除任务、中文设置连续自动保存、Cookie 字符串和嵌套账号、重检与 ping、重启恢复、关闭到托盘继续录制、单实例恢复窗口及托盘退出后无 FFmpeg 残留。缺 ffmpeg 时仍能保存和 ping；运行中提供 ffmpeg 后刷新依赖、重检并完成真实录制。
 

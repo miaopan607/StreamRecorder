@@ -20,10 +20,14 @@ struct MediaServer {
 }
 impl MediaServer {
     async fn new(binary: PathBuf) -> Self {
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        Self::with_listener(binary, listener).await
+    }
+    async fn with_listener(binary: PathBuf, listener: TcpListener) -> Self {
         let root =
             PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../../artifacts/tauri-smoke-media");
         let mut files = HashMap::new();
-        for entry in fs::read_dir(root).unwrap().filter_map(Result::ok) {
+        for entry in fs::read_dir(&root).unwrap().filter_map(Result::ok) {
             if entry.path().is_file() {
                 files.insert(
                     format!("/{}", entry.file_name().to_string_lossy()),
@@ -31,8 +35,16 @@ impl MediaServer {
                 );
             }
         }
+        let flv = Command::new(&binary)
+            .args(["-v", "error", "-i"])
+            .arg(root.join("live0.ts"))
+            .args(["-c", "copy", "-f", "flv", "pipe:1"])
+            .kill_on_drop(true)
+            .creation_flags(0x08000000)
+            .output().await.unwrap();
+        assert!(flv.status.success(), "{}", String::from_utf8_lossy(&flv.stderr));
+        files.insert("/finite.flv".into(), flv.stdout);
         let files = Arc::new(files);
-        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
         let url = format!("http://{}", listener.local_addr().unwrap());
         let cancel = CancellationToken::new();
         let active = cancel.clone();
@@ -44,13 +56,62 @@ impl MediaServer {
                 tokio::select! {
                     _=active.cancelled()=>break,
                     accepted=listener.accept()=>{let (stream,_)=accepted.unwrap();let files=files.clone();let counts=seen.clone();let cancel=active.clone();let binary=binary.clone();
-                        connections.spawn(async move{let mut reader=BufReader::new(stream);let mut line=String::new();if reader.read_line(&mut line).await.unwrap_or(0)==0{return}let path=line.split_whitespace().nth(1).unwrap().split('?').next().unwrap().to_owned();let mut length=0usize;
-                            loop{line.clear();if reader.read_line(&mut line).await.unwrap_or(0)==0{return}if line=="\r\n"{break}if let Some((key,value))=line.split_once(':'){if key.eq_ignore_ascii_case("content-length"){length=value.trim().parse().unwrap();}}}
-                            let mut request=vec![0;length];if reader.read_exact(&mut request).await.is_err(){return}*counts.lock().entry(path.clone()).or_default()+=1;let mut stream=reader.into_inner();
-                            if path=="/continuous.flv"{continuous(&mut stream,&binary,cancel).await;return}
-                            if path.starts_with("/langweb/")||path=="/bad-hook"{cancel.cancelled().await;return}
-                            let Some(body)=files.get(&path)else{let _=stream.write_all(b"HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\nConnection: close\r\n\r\n").await;return};
-                            let header=format!("HTTP/1.1 200 OK\r\nContent-Type: application/octet-stream\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",body.len());let _=stream.write_all(header.as_bytes()).await;let _=stream.write_all(body).await;
+                        connections.spawn(async move {
+                            let mut reader = BufReader::new(stream);
+                            let mut line = String::new();
+                            if reader.read_line(&mut line).await.unwrap_or(0) == 0 { return; }
+                            let path = line.split_whitespace().nth(1).unwrap().split('?').next().unwrap().to_owned();
+                            let mut length = 0usize;
+                            let mut offset = 0usize;
+                            loop {
+                                line.clear();
+                                if reader.read_line(&mut line).await.unwrap_or(0) == 0 { return; }
+                                if line == "\r\n" { break; }
+                                if let Some((key, value)) = line.split_once(':') {
+                                    if key.eq_ignore_ascii_case("content-length") { length = value.trim().parse().unwrap(); }
+                                    if key.eq_ignore_ascii_case("range") {
+                                        offset = value.trim().strip_prefix("bytes=").unwrap().split('-').next().unwrap().parse().unwrap();
+                                    }
+                                }
+                            }
+                            let mut request = vec![0; length];
+                            if reader.read_exact(&mut request).await.is_err() { return; }
+                            let attempt = {
+                                let mut counts = counts.lock();
+                                let count = counts.entry(path.clone()).or_default();
+                                *count += 1;
+                                *count
+                            };
+                            let mut stream = reader.into_inner();
+                            if path == "/continuous.flv" { continuous(&mut stream, &binary, cancel).await; return; }
+                            if path.starts_with("/langweb/") || path == "/bad-hook" { cancel.cancelled().await; return; }
+                            if path == "/forbidden.flv" || (path == "/retry.m3u8" && attempt == 1) {
+                                let status = if path == "/forbidden.flv" { "403 Forbidden" } else { "503 Service Unavailable" };
+                                let header = format!("HTTP/1.1 {status}\r\nContent-Length: 0\r\nConnection: close\r\n\r\n");
+                                let _ = stream.write_all(header.as_bytes()).await;
+                                return;
+                            }
+                            let file = match path.as_str() {
+                                "/retry.m3u8" => "/live.m3u8",
+                                "/disconnect.flv" => "/finite.flv",
+                                other => other,
+                            };
+                            let Some(body) = files.get(file) else {
+                                let _ = stream.write_all(b"HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\nConnection: close\r\n\r\n").await;
+                                return;
+                            };
+                            let Some(remaining) = body.get(offset..) else { return; };
+                            let status = if offset == 0 { "200 OK" } else { "206 Partial Content" };
+                            let range = if offset == 0 { String::new() } else {
+                                format!("Content-Range: bytes {offset}-{}/{}\r\n", body.len() - 1, body.len())
+                            };
+                            let header = format!("HTTP/1.1 {status}\r\nContent-Type: application/octet-stream\r\nAccept-Ranges: bytes\r\n{range}Content-Length: {}\r\nConnection: close\r\n\r\n", remaining.len());
+                            let _ = stream.write_all(header.as_bytes()).await;
+                            // 首次响应声明完整长度却中途断开；重连必须续传，而非把正常 EOF 当断线。
+                            let sent = if path == "/disconnect.flv" && attempt == 1 {
+                                &remaining[..remaining.len() / 2]
+                            } else { remaining };
+                            let _ = stream.write_all(sent).await;
                         });
                     }
                 }
@@ -347,5 +408,82 @@ async fn ffmpeg_smoke() {
     }
     println!("原生持续 FLV：状态/时长/速度更新，慢平台和坏 webhook 下保存、ping、停止成功");
     core.shutdown().await;
+    server.close().await;
+}
+
+#[tokio::test]
+#[ignore = "需要真实 ffmpeg/ffprobe；默认套件不启动媒体工具"]
+async fn http_reconnect_smoke() {
+    let binary = find_ffmpeg().expect("请将验收 ffmpeg 目录加入 PATH");
+    let server = MediaServer::new(binary.clone()).await;
+    let directory = tempfile::tempdir().unwrap();
+    let core = CoreService::new(ProjectPaths::at(directory.path().to_owned()), None);
+    core.start().await.unwrap();
+    let mut settings = core.snapshot().settings;
+    settings.force_https_recording = false;
+    settings.recording_space_threshold = "0".into();
+    settings.convert_to_mp4 = false;
+    settings.system_notification_enabled = false;
+    core.settings_update(settings).await.unwrap();
+    let source = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../../artifacts/tauri-smoke-media/live0.ts");
+    let reference = inspect(&binary, &source).await;
+    let reference_duration: f64 = reference["format"]["duration"].as_str().unwrap().parse().unwrap();
+    for (path, expected_duration) in [
+        ("retry.m3u8", reference_duration * 12.0),
+        ("disconnect.flv", reference_duration),
+        ("finite.flv", reference_duration),
+    ] {
+        let first = server.count("/live0.ts");
+        let id = core.jobs_upsert(vec![JobInput {
+            url: format!("{}/{path}", server.url),
+            recording_dir: path.into(),
+            ..JobInput::default()
+        }]).await.unwrap().changed_ids[0].clone();
+        let output = completed(&core, &id).await;
+        let media = inspect(&binary, &output).await;
+        let duration: f64 = media["format"]["duration"].as_str().unwrap().parse().unwrap();
+        assert!((duration - expected_duration).abs() < 1.0, "{path}：期望 {expected_duration}s，实际 {duration}s");
+        if path == "retry.m3u8" {
+            assert_eq!(server.count("/retry.m3u8"), 2, "503 恢复后不应在 EOF 时重复请求清单");
+        }
+        assert_eq!(server.count("/live0.ts") - first, usize::from(path == "retry.m3u8"), "完整 HLS 分片不应在 EOF 时重播");
+        assert_ne!(core.job(&id).unwrap().status_info, ERROR);
+        core.jobs_stop_monitoring(vec![id]).await.unwrap();
+        println!("{path}：恢复后正常结束，{duration:.3}s");
+    }
+    let id = core.jobs_upsert(vec![JobInput {
+        url: format!("{}/forbidden.flv", server.url),
+        ..JobInput::default()
+    }]).await.unwrap().changed_ids[0].clone();
+    tokio::time::timeout(Duration::from_secs(10), async {
+        loop {
+            if core.job(&id).unwrap().status_info == ERROR { break; }
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+    }).await.unwrap();
+    assert_eq!(server.count("/forbidden.flv"), 1, "403 不应作为临时错误重试");
+    println!("403：错误可见，未重试");
+    core.shutdown().await;
+    server.close().await;
+
+    // 先让真实连接被拒绝，再恢复同一地址，验证连接阶段的重试。
+    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let address = listener.local_addr().unwrap();
+    drop(listener);
+    let output = directory.path().join("network.ts");
+    let mut command = ffmpeg_command(
+        &binary, &format!("http://{address}/finite.flv"), &output,
+        "ts", false, "1800", None,
+    ).unwrap();
+    let process = ManagedProcess::spawn(&mut command).await.unwrap();
+    tokio::time::sleep(Duration::from_secs(2)).await;
+    let listener = TcpListener::bind(address).await.unwrap();
+    let server = MediaServer::with_listener(binary.clone(), listener).await;
+    let result = tokio::time::timeout(Duration::from_secs(15), process.wait()).await.unwrap().unwrap();
+    assert!(result.success, "连接恢复后仍录制失败：{}", result.stderr);
+    let media = inspect(&binary, &output).await;
+    let duration: f64 = media["format"]["duration"].as_str().unwrap().parse().unwrap();
+    assert!((duration - reference_duration).abs() < 1.0, "连接恢复后的录制不完整：{duration}s");
+    println!("TCP 连接拒绝：恢复后录制成功并自然结束，{duration:.3}s");
     server.close().await;
 }
