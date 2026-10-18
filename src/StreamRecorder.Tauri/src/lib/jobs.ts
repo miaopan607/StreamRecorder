@@ -89,13 +89,11 @@ export function parseBatch(text: string, settings: CoreSettings) {
 export function selectedTargets(
   jobs: Job[],
   selected: Set<string>,
-  active: string | null,
   allWhenEmpty: boolean,
 ) {
   const checked = jobs.filter((job) => selected.has(job.id));
   if (checked.length) return checked;
-  const current = jobs.find((job) => job.id === active);
-  return current ? [current] : allWhenEmpty ? jobs : [];
+  return allWhenEmpty ? jobs : [];
 }
 export const columns = [
   ["PlatformColumn", "平台"],

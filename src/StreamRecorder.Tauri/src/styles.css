@@ -180,8 +180,34 @@ small {
 }
 .main-content {
   padding: 28px 30px;
-  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   min-width: 0;
+  min-height: 0;
+}
+.page-content {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+.tasks-content {
+  display: flex;
+  overflow: hidden;
+}
+.page-content[hidden] {
+  display: none;
+}
+.tasks-page {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.tasks-page > .page-header {
+  flex-shrink: 0;
 }
 .status-bar {
   grid-column: 1/-1;
@@ -219,7 +245,7 @@ small {
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  margin-bottom: 25px;
+  margin-bottom: 16px;
 }
 .page-header h1 {
   font-size: 25px;
@@ -234,19 +260,32 @@ small {
 }
 .inline-actions {
   display: flex;
-  gap: 8px;
+  gap: 6px;
   align-items: center;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  flex: 0 0 auto;
 }
 .task-toolbar {
   display: flex;
   align-items: center;
-  gap: 14px;
-  flex-wrap: wrap;
+  gap: 8px;
+  flex-wrap: nowrap;
+  min-width: 0;
+  flex-shrink: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
   border-top: 1px solid var(--border);
   border-bottom: 1px solid var(--border);
-  padding: 14px 0;
-  margin-bottom: 21px;
+  padding: 8px 0;
+  margin-bottom: 14px;
+}
+.task-toolbar button {
+  padding: 5px 8px;
+  font-size: 12px;
+}
+.task-toolbar .inline-actions {
+  gap: 4px;
 }
 .toolbar-divider {
   height: 20px;
@@ -258,18 +297,25 @@ small {
   color: var(--muted);
   font-size: 12px;
   margin-left: auto;
+  flex: 0 0 auto;
+  white-space: nowrap;
 }
 .job-cards {
   display: grid;
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  align-content: start;
+  grid-auto-rows: max-content;
   grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
-  gap: 16px;
+  gap: 12px;
   animation: fade-in 120ms ease-out;
 }
 .job-card {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 7px;
-  padding: 18px;
+  padding: 14px;
   min-width: 0;
   cursor: default;
 }
@@ -353,14 +399,18 @@ small {
   display: flex;
   align-items: center;
   gap: 4px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   padding-top: 12px;
 }
 .job-actions button {
   border: 0;
   padding: 5px 8px;
+  flex: 0 0 auto;
   background: transparent;
   font-size: 12px;
+}
+.job-actions button:disabled {
+  pointer-events: none;
 }
 .job-error {
   color: var(--error);
@@ -371,6 +421,9 @@ small {
   overflow: auto;
 }
 .table-container {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
   overflow: auto;
   animation: fade-in 120ms ease-out;
   border: 1px solid var(--border);
@@ -378,11 +431,15 @@ small {
   background: var(--surface);
 }
 table {
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
   width: 100%;
   text-align: left;
 }
 th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
   background: var(--bg);
   font-size: 11px;
   color: var(--muted);
@@ -391,7 +448,7 @@ th {
 }
 th,
 td {
-  padding: 12px;
+  padding: 8px 10px;
   border-bottom: 1px solid var(--border);
 }
 td {
@@ -406,7 +463,6 @@ td strong {
 }
 td .job-actions {
   padding: 0;
-  min-width: 210px;
 }
 tr:last-child td {
   border-bottom: 0;
@@ -414,8 +470,30 @@ tr:last-child td {
 tr.selected {
   background: var(--hover);
 }
+/* 固定两端，中间列在表格容器内滚动。 */
+.selection-cell,
+.actions-cell {
+  position: sticky;
+  z-index: 1;
+  background: var(--surface);
+}
 .selection-cell {
+  left: 0;
   width: 48px;
+  min-width: 48px;
+}
+.actions-cell {
+  right: 0;
+  box-shadow: -1px 0 var(--border);
+}
+th.selection-cell,
+th.actions-cell {
+  z-index: 3;
+  background: var(--bg);
+}
+tr.selected .selection-cell,
+tr.selected .actions-cell {
+  background: var(--hover);
 }
 .empty-state {
   padding: 65px 20px;
@@ -438,6 +516,7 @@ tr.selected {
 }
 .error-banner {
   margin: 0 0 20px;
+  flex-shrink: 0;
   padding: 12px 14px;
   border: 1px solid color-mix(in srgb, var(--error) 35%, var(--border));
   background: color-mix(in srgb, var(--error) 7%, var(--surface));
@@ -789,9 +868,6 @@ h3 {
   }
   .main-content {
     padding: 25px 23px;
-  }
-  .task-toolbar .selection-label {
-    margin-left: 0;
   }
   .diagnostic-layout {
     gap: 20px;

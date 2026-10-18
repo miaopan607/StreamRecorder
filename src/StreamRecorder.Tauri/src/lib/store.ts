@@ -91,7 +91,6 @@ export interface AppState {
   autostart: boolean;
   logs: string[];
   selected: Set<string>;
-  active: string | null;
   error: string;
   saveError: string;
   saving: boolean;
@@ -112,7 +111,6 @@ export class AppStore {
     autostart: false,
     logs: [],
     selected: new Set(),
-    active: null,
     error: "",
     saveError: "",
     saving: false,
@@ -152,10 +150,6 @@ export class AppStore {
     this.update({
       snapshot,
       selected: new Set([...this.state.selected].filter((id) => ids.has(id))),
-      active:
-        this.state.active && ids.has(this.state.active)
-          ? this.state.active
-          : null,
     });
     this.draft.apply(snapshot.settings);
   }

@@ -47,7 +47,7 @@ function bootstrap(data: Snapshot, core: CoreState): DesktopBootstrap {
 }
 it("bootstrap 与排队事件交错时只应用最新快照和核心状态", async () => {
   const app = new AppStore();
-  app.update({ selected: new Set(["甲", "乙"]), active: "乙" });
+  app.update({ selected: new Set(["甲", "乙"]) });
   api.bootstrap.mockImplementation(async () => {
     listeners.get("core-event")!({ payload: { name: "snapshot_changed", body: snapshot(9, "旧模板", []) } });
     listeners.get("core-state")!({ payload: { status: "starting", error: "", revision: 9 } });
@@ -58,11 +58,10 @@ it("bootstrap 与排队事件交错时只应用最新快照和核心状态", asy
   expect(app.state.snapshot?.revision).toBe(11);
   expect(app.state.settings.custom_filename_template).toBe("最新模板");
   expect([...app.state.selected]).toEqual(["乙"]);
-  expect(app.state.active).toBe("乙");
   expect(app.state.core.status).toBe("connected");
   listeners.get("core-event")!({ payload: { name: "snapshot_changed", body: snapshot(10, "迟到模板", []) } });
   expect(app.state.settings.custom_filename_template).toBe("最新模板");
-  expect(app.state.active).toBe("乙");
+  expect([...app.state.selected]).toEqual(["乙"]);
 });
 it("监听安装中途失败会撤销旧订阅，初始化可重试且不重复订阅", async () => {
   const app = new AppStore();

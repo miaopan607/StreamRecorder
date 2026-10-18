@@ -98,13 +98,13 @@ export default function App() {
             </button>
           </div>
         )}
-        <div hidden={page !== "tasks"}>
+        <div className="page-content tasks-content" hidden={page !== "tasks"}>
           <TasksPage />
         </div>
-        <div hidden={page !== "settings"}>
+        <div className="page-content" hidden={page !== "settings"}>
           <SettingsPage />
         </div>
-        <div hidden={page !== "diagnostics"}>
+        <div className="page-content" hidden={page !== "diagnostics"}>
           <DiagnosticsPage />
         </div>
       </main>

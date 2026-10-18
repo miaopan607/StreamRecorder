@@ -26,14 +26,9 @@ export default function TasksPage() {
   const [deleting, setDeleting] = useState<Job[] | null>(null);
   const [busy, setBusy] = useState<Set<string>>(() => new Set());
   const connected = state.core.status === "connected";
-  const targets = selectedTargets(jobs, state.selected, state.active, true);
-  const deleteTargets = selectedTargets(
-    jobs,
-    state.selected,
-    state.active,
-    false,
-  );
-  const allTarget = !state.selected.size && !state.active;
+  const targets = selectedTargets(jobs, state.selected, true);
+  const deleteTargets = selectedTargets(jobs, state.selected, false);
+  const allTarget = !state.selected.size;
   async function action(key: string, fn: () => Promise<unknown>) {
     setBusy((previous) => new Set([...previous, key]));
     try {
@@ -63,7 +58,6 @@ export default function TasksPage() {
     const clear = jobs.every((job) => state.selected.has(job.id));
     store.update({
       selected: clear ? new Set() : new Set(jobs.map((job) => job.id)),
-      active: null,
     });
   }
   const visible = (key: string) => state.ui.VisibleColumns[key] !== false;
@@ -86,7 +80,7 @@ export default function TasksPage() {
   function actions(job: Job) {
     const disabled = !connected || busy.has(job.id) || busy.has("batch");
     return (
-      <div className="job-actions" onClick={(event) => event.stopPropagation()}>
+      <div className="job-actions">
         <button disabled={disabled} onClick={() => setEditor(job)}>
           编辑
         </button>
@@ -183,10 +177,10 @@ export default function TasksPage() {
               ? "取消全选"
               : "全选"}
           </button>
-          {(state.selected.size > 0 || state.active) && (
+          {state.selected.size > 0 && (
             <button
               onClick={() =>
-                store.update({ selected: new Set(), active: null })
+                store.update({ selected: new Set() })
               }
             >
               取消选择
@@ -243,9 +237,9 @@ export default function TasksPage() {
         <div className="job-cards" key="cards">
           {jobs.map((job) => (
             <article
-              className={`job-card ${state.active === job.id ? "selected" : ""}`}
+              className={`job-card ${state.selected.has(job.id) ? "selected" : ""}`}
               key={job.id}
-              onClick={() => store.update({ active: job.id })}
+              onClick={() => store.select(job.id, !state.selected.has(job.id))}
             >
               <header>
                 {checkbox(job)}
@@ -286,17 +280,18 @@ export default function TasksPage() {
                   .map(([key, label]) => (
                     <th key={key}>{label}</th>
                   ))}
-                <th>操作</th>
+                <th className="actions-cell">操作</th>
               </tr>
             </thead>
             <tbody>
               {jobs.map((job) => (
                 <tr
                   key={job.id}
-                  className={state.active === job.id ? "selected" : ""}
-                  onClick={() => store.update({ active: job.id })}
+                  className={state.selected.has(job.id) ? "selected" : ""}
+                  aria-selected={state.selected.has(job.id)}
+                  onClick={() => store.select(job.id, !state.selected.has(job.id))}
                 >
-                  <td>{checkbox(job)}</td>
+                  <td className="selection-cell">{checkbox(job)}</td>
                   <td>
                     <strong title={job.display_title}>
                       {job.display_title}
@@ -310,7 +305,7 @@ export default function TasksPage() {
                     .map(([key]) => (
                       <td key={key}>{cell(job, key)}</td>
                     ))}
-                  <td>{actions(job)}</td>
+                  <td className="actions-cell">{actions(job)}</td>
                 </tr>
               ))}
             </tbody>

@@ -60,30 +60,28 @@ describe("批量导入", () => {
     expect(parseBatch("说明文字\n,", defaultSettings)).toEqual([]));
 });
 describe("批量目标与快照", () => {
-  it("复选集合优先于当前行，无选择监控全部但删除不扩大范围", () => {
+  it("选中任务限定批量目标，无选择监控全部但不允许删除", () => {
     const jobs = [job("a"), job("b"), job("c")];
     expect(
-      selectedTargets(jobs, new Set(["b"]), "a", true).map((job) => job.id),
+      selectedTargets(jobs, new Set(["b"]), true).map((job) => job.id),
     ).toEqual(["b"]);
     expect(
-      selectedTargets(jobs, new Set(), "c", true).map((job) => job.id),
-    ).toEqual(["c"]);
+      selectedTargets(jobs, new Set(["a", "c"]), false).map((job) => job.id),
+    ).toEqual(["a", "c"]);
     expect(
-      selectedTargets(jobs, new Set(), null, true).map((job) => job.id),
+      selectedTargets(jobs, new Set(), true).map((job) => job.id),
     ).toEqual(["a", "b", "c"]);
-    expect(selectedTargets(jobs, new Set(), null, false)).toEqual([]);
+    expect(selectedTargets(jobs, new Set(), false)).toEqual([]);
   });
   it("刷新保持存在的选择，删除清理失效选择，不丢配置草稿", () => {
     const app = new AppStore();
     app.applySnapshot(snapshot([job("a"), job("b")]));
-    app.update({ active: "b", selected: new Set(["a", "b"]) });
+    app.update({ selected: new Set(["a", "b"]) });
     app.draft.set("custom_filename_template", "用户输入");
     app.applySnapshot(snapshot([job("b")], 2));
     expect([...app.state.selected]).toEqual(["b"]);
-    expect(app.state.active).toBe("b");
     expect(app.state.settings.custom_filename_template).toBe("用户输入");
     app.applySnapshot(snapshot([], 3));
-    expect(app.state.active).toBeNull();
     expect([...app.state.selected]).toEqual([]);
   });
 });
