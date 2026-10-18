@@ -484,6 +484,8 @@ tr.selected {
 }
 .actions-cell {
   right: 0;
+  /* 按按钮内容收紧操作列，避免额外列宽形成右侧留白。 */
+  width: 1%;
   box-shadow: -1px 0 var(--border);
 }
 th.selection-cell,
