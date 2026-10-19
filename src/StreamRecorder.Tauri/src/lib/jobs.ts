@@ -6,7 +6,7 @@ export const qualities: Record<string, string> = {
   SD: "标清",
   LD: "流畅",
 };
-export const formats = ["TS", "FLV", "MKV", "MOV", "MP4", "MP3", "M4A"];
+export const formats = ["TS", "FLV", "MKV", "MOV", "MP4", "NUT", "MP3", "M4A"];
 export function newJob(settings: CoreSettings): JobDraft {
   return {
     id: null,

@@ -64,6 +64,7 @@ export interface CoreSettings {
   video_format: string;
   record_quality: string;
   loop_time_seconds: string;
+  check_on_create: boolean;
   segmented_recording_enabled: boolean;
   force_https_recording: boolean;
   default_live_source: string;
@@ -92,6 +93,7 @@ export interface CoreSettings {
   custom_stream_error_content: string;
   dingtalk_enabled: boolean;
   wechat_enabled: boolean;
+  feishu_enabled: boolean;
   bark_enabled: boolean;
   ntfy_enabled: boolean;
   serverchan_enabled: boolean;
@@ -101,6 +103,7 @@ export interface CoreSettings {
   dingtalk_at_objects: string;
   dingtalk_at_all: boolean;
   wechat_webhook_url: string;
+  feishu_webhook_url: string;
   bark_webhook_url: string;
   bark_interrupt_level: string;
   bark_sound: string;
@@ -185,6 +188,7 @@ export const defaultSettings: CoreSettings = {
   video_format: "TS",
   record_quality: "OD",
   loop_time_seconds: "180",
+  check_on_create: true,
   segmented_recording_enabled: true,
   force_https_recording: true,
   default_live_source: "FLV",
@@ -213,6 +217,7 @@ export const defaultSettings: CoreSettings = {
   custom_stream_error_content: "",
   dingtalk_enabled: false,
   wechat_enabled: false,
+  feishu_enabled: false,
   bark_enabled: false,
   ntfy_enabled: false,
   serverchan_enabled: false,
@@ -222,6 +227,7 @@ export const defaultSettings: CoreSettings = {
   dingtalk_at_objects: "",
   dingtalk_at_all: false,
   wechat_webhook_url: "",
+  feishu_webhook_url: "",
   bark_webhook_url: "",
   bark_interrupt_level: "active",
   bark_sound: "",

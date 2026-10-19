@@ -229,8 +229,9 @@ pub fn fit_window(window: &tauri::WebviewWindow) -> Result<(), String> {
     if room_width == 0 || room_height == 0 {
         return Err("当前显示器工作区过小，无法显示窗口".into());
     }
-    let width = ((1380.0 * scale).round() as u32).min(room_width);
-    let height = ((860.0 * scale).round() as u32).min(room_height);
+    let saved = *window.app_handle().state::<DesktopState>().window_state.lock();
+    let width = ((saved.width.max(960.0) * scale).round() as u32).min(room_width);
+    let height = ((saved.height.max(640.0) * scale).round() as u32).min(room_height);
     window
         .set_min_size(Some(tauri::PhysicalSize::new(
             ((960.0 * scale).round() as u32).min(width),
@@ -246,7 +247,9 @@ pub fn fit_window(window: &tauri::WebviewWindow) -> Result<(), String> {
             area.position.x + (area.size.width.saturating_sub(outer.width) / 2) as i32,
             area.position.y + (area.size.height.saturating_sub(outer.height) / 2) as i32,
         ))
-        .map_err(|e| e.to_string())
+        .map_err(|e| e.to_string())?;
+    if saved.maximized { window.maximize().map_err(|e| e.to_string())?; }
+    Ok(())
 }
 
 pub fn restore(app: &AppHandle) {

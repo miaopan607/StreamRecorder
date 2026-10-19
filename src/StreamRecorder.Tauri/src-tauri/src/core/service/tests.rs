@@ -291,3 +291,51 @@ async fn repeated_shutdown_waits_for_the_same_batch_reclamation() {
             .unwrap();
     }
 }
+
+#[tokio::test]
+async fn scheduled_jobs_wait_then_admit_when_window_opens() {
+    let directory = tempfile::tempdir().unwrap();
+    let core = core(&directory.path().to_owned()).await;
+    let mut network = Network::new().await;
+    *core.probe.endpoint.lock() = Some(network.endpoint.clone());
+    let mut input = JobInput {
+        url: "https://www.lang.live/10001".into(),
+        scheduled_recording: true,
+        scheduled_start_time: "3000-01-01 09:00:00".into(),
+        monitor_hours: "1".into(),
+        ..JobInput::default()
+    };
+    let id = core.jobs_upsert(vec![input.clone()]).await.unwrap().changed_ids[0].clone();
+    assert_eq!(core.job(&id).unwrap().status_info, SCHEDULED);
+    assert!(core.jobs_recheck(vec![id.clone()]).unwrap().queued_ids.is_empty());
+    assert!(tokio::time::timeout(Duration::from_millis(100), network.requests.recv()).await.is_err());
+    input.id = Some(id.clone());
+    input.scheduled_start_time = "00:00:00".into();
+    input.monitor_hours = "24".into();
+    core.jobs_upsert(vec![input]).await.unwrap();
+    assert!(network.request().await.contains("/langweb/"));
+    core.jobs_stop_monitoring(vec![id]).await.unwrap();
+    core.shutdown().await;
+    network.close().await;
+}
+
+#[tokio::test]
+async fn disabling_create_check_still_allows_manual_recheck() {
+    let directory = tempfile::tempdir().unwrap();
+    let core = core(&directory.path().to_owned()).await;
+    let mut network = Network::new().await;
+    *core.probe.endpoint.lock() = Some(network.endpoint.clone());
+    let mut settings = core.snapshot().settings;
+    settings.check_on_create = false;
+    core.settings_update(settings).await.unwrap();
+    let id = core.jobs_upsert(vec![JobInput {
+        url: "https://www.lang.live/10001".into(),
+        ..JobInput::default()
+    }]).await.unwrap().changed_ids[0].clone();
+    assert!(tokio::time::timeout(Duration::from_millis(100), network.requests.recv()).await.is_err());
+    assert_eq!(core.jobs_recheck(vec![id.clone()]).unwrap().queued_ids, vec![id.clone()]);
+    assert!(network.request().await.contains("/langweb/"));
+    core.jobs_stop_monitoring(vec![id]).await.unwrap();
+    core.shutdown().await;
+    network.close().await;
+}

@@ -237,6 +237,7 @@ pub fn ffmpeg_command(
         "mp4" => "mp4",
         "mkv" => "matroska",
         "mov" => "mov",
+        "nut" => "nut",
         "mp3" => "mp3",
         "m4a" => "ipod",
         "wav" => "wav",

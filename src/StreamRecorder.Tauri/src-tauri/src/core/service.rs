@@ -128,7 +128,8 @@ impl CoreData {
             && self
                 .jobs
                 .iter()
-                .any(|job| job.id() == id && job.input.monitor_status)
+                .any(|job| job.id() == id && job.input.monitor_status
+                    && job.input.in_monitor_window(chrono::Local::now().naive_local()))
     }
     fn invalidate(&mut self, id: &str, root: &CancellationToken) {
         if let Some(runtime) = self.runtime.get_mut(id) {
@@ -140,18 +141,27 @@ impl CoreData {
         }
         self.queue.retain(|queued| queued.id != id);
     }
-    fn enqueue(&mut self, ids: &[String], all: bool) -> Vec<String> {
+    fn enqueue(&mut self, ids: &[String], all: bool) -> (Vec<String>, bool) {
         if self.closing {
-            return Vec::new();
+            return (Vec::new(), false);
         }
         let mut queued = Vec::new();
-        for job in &self.jobs {
+        let mut status_changed = false;
+        let now = chrono::Local::now().naive_local();
+        for job in &mut self.jobs {
             if !job.input.monitor_status || (!all && !ids.iter().any(|id| id == job.id())) {
                 continue;
             }
             let Some(runtime) = self.runtime.get_mut(job.id()) else {
                 continue;
             };
+            if !job.input.in_monitor_window(now) {
+                if runtime.recording.is_none() && runtime.checking.is_none() && job.status_info != SCHEDULED {
+                    job.status_info = SCHEDULED.into();
+                    status_changed = true;
+                }
+                continue;
+            }
             if runtime.queued || runtime.checking.is_some() || runtime.recording.is_some() {
                 continue;
             }
@@ -163,7 +173,7 @@ impl CoreData {
             });
             queued.push(job.id().into());
         }
-        queued
+        (queued, status_changed)
     }
 }
 #[derive(Clone, Serialize)]
@@ -581,7 +591,11 @@ impl CoreService {
                         } else {
                             data.runtime
                                 .insert(id, JobRuntime::new(core.cancel.child_token()));
-                            data.jobs.push(RecordingJob::new(input));
+                            let mut job = RecordingJob::new(input);
+                            if !data.settings.check_on_create {
+                                job.last_checked_at = utc_now();
+                            }
+                            data.jobs.push(job);
                         }
                     }
                     (data.changed(), stops)
@@ -762,11 +776,13 @@ impl CoreService {
         }
     }
     pub fn jobs_recheck(&self, ids: Vec<String>) -> Result<RecheckReply, String> {
-        let queued_ids = {
+        let (queued_ids, snapshot) = {
             let mut data = self.data.lock();
             data.ready()?;
-            data.enqueue(&ids, ids.is_empty())
+            let (queued_ids, status_changed) = data.enqueue(&ids, ids.is_empty());
+            (queued_ids, status_changed.then(|| data.changed()))
         };
+        if let Some(snapshot) = snapshot { self.publish(snapshot); }
         self.wake.notify_one();
         Ok(RecheckReply { queued_ids })
     }
@@ -774,7 +790,7 @@ impl CoreService {
         let mut interval = tokio::time::interval(Duration::from_secs(2));
         loop {
             tokio::select! {_=self.cancel.cancelled()=>break,_=interval.tick()=>{},_=self.wake.notified()=>{}}
-            {
+            let snapshot = {
                 let mut data = self.data.lock();
                 let seconds = data
                     .settings
@@ -797,8 +813,10 @@ impl CoreService {
                         })
                         .map(|job| job.id().to_owned())
                         .collect::<Vec<_>>();
-                data.enqueue(&ids, false);
-            }
+                let (_, status_changed) = data.enqueue(&ids, false);
+                status_changed.then(|| data.changed())
+            };
+            if let Some(snapshot) = snapshot { self.publish(snapshot); }
             self.admit();
             self.refresh_stats();
         }
@@ -828,6 +846,9 @@ impl CoreService {
                 };
                 let queue = data.queue.remove(position).unwrap();
                 if !data.current(&queue.id, queue.generation) {
+                    if let Some(runtime) = data.runtime.get_mut(&queue.id) {
+                        runtime.queued = false;
+                    }
                     continue;
                 }
                 let Some(job) = data.jobs.iter().find(|job| job.id() == queue.id) else {
@@ -1103,15 +1124,19 @@ impl CoreService {
                     runtime.checking = None;
                 }
             }
-            if data.current(&queued.id, queued.generation) && !cancel.is_cancelled() {
-                if let Some(error) = error {
-                    if let Some(job) = data.jobs.iter_mut().find(|job| job.id() == queued.id) {
+            if !data.closing && !cancel.is_cancelled()
+                && data.runtime.get(&queued.id).is_some_and(|runtime| runtime.generation == queued.generation)
+            {
+                if let Some(job) = data.jobs.iter_mut().find(|job| job.id() == queued.id && job.input.monitor_status) {
+                    if !job.input.in_monitor_window(chrono::Local::now().naive_local()) {
+                        if job.recording_started_at.is_empty() {
+                            job.status_info = SCHEDULED.into();
+                        }
+                    } else if let Some(error) = error {
                         job.status_info = ERROR.into();
                         job.error_message = error;
                         job.input.updated_at = utc_now();
-                    }
-                } else if let Some(job) = data.jobs.iter_mut().find(|job| job.id() == queued.id) {
-                    if job.status_info == CHECKING {
+                    } else if job.status_info == CHECKING {
                         job.status_info = MONITORING.into();
                     }
                 }
@@ -1159,7 +1184,7 @@ impl CoreService {
             if !matches {
                 return;
             }
-            data.runtime.get_mut(job.id()).unwrap().recording = None;
+            let elapsed = data.runtime.get_mut(job.id()).unwrap().recording.take().unwrap().started.elapsed();
             let closing = data.closing;
             let Some(current) = data
                 .jobs
@@ -1169,6 +1194,10 @@ impl CoreService {
                 return;
             };
             current.recording_started_at.clear();
+            // 有效录制结束后立即复查；短录制仍按轮询间隔，避免失败重启循环。
+            if elapsed > Duration::from_secs(25) && !current.record_url.contains(".flv") {
+                current.last_checked_at.clear();
+            }
             current.status_info = if current.input.monitor_status && !closing {
                 MONITORING
             } else {

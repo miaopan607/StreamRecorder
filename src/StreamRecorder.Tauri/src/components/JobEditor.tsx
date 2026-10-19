@@ -191,12 +191,13 @@ export default function JobEditor({
                   label="计划开始时间"
                   value={draft.scheduled_start_time}
                   disabled={!draft.scheduled_recording}
-                  hint="格式：YYYY-MM-DD HH:mm:ss"
+                  hint="每天的时间段，用逗号分隔，例如 09:00:00,20:00:00；也支持单次日期时间。"
                   onChange={(value) => change("scheduled_start_time", value)}
                 />
                 <Field
                   label="监控时长（小时）"
                   value={draft.monitor_hours}
+                  hint="与开始时间一一对应，例如 3,5；支持小数和跨午夜。"
                   onChange={(value) => change("monitor_hours", value)}
                 />
               </div>

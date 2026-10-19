@@ -8,8 +8,10 @@ Windows 直播录制工具，使用 **Tauri 2 + React + TypeScript** 界面和 *
 
 - 中文任务工作台：列表 / 卡片、列设置、任务新增 / 编辑 / 删除、批量导入和监控。
 - 自动开播检测和 ffmpeg 录制；显示录制状态、时长、速度，打开保存目录和最新文件。
+- TS、FLV、MKV、MOV、MP4、NUT、MP3、M4A 输出；每日多时段监控支持小数时长与跨午夜，也兼容单次日期时间。
 - 录制、网络、命名、通知和主题设置自动保存；Cookies 与账号独立管理。
-- 浅色 / 深色 / 跟随系统；托盘、系统通知、单实例和 Windows 登录后启动到托盘。
+- 飞书、钉钉、企业微信、Bark、Ntfy、Telegram、Server酱和邮件推送；新增任务可选择立即检测或等待轮询。
+- 浅色 / 深色 / 跟随系统；托盘、系统通知、单实例和 Windows 登录后启动到托盘；重启时恢复正常窗口尺寸与最大化状态。
 - 核心服务诊断、FFmpeg 检测和最近 300 条日志。
 
 ## 运行要求
@@ -83,7 +85,7 @@ npm.cmd run build
 cargo test --manifest-path .\src-tauri\Cargo.toml --bin StreamRecorder
 ```
 
-默认 Rust 套件不访问公网、不使用用户 runtime，也不要求 ffmpeg。平台测试通过真实 loopback HTTP 和生产解析路径，覆盖 51 个平台键的开播 / 未开播、支持的画质、畸形响应、登录失败与 Cookie 更新；签名使用独立上游向量校对。核心回归覆盖配置失败保持、探测取消、并发降限、stderr 洪泛、进程树回收和重复退出。进程树测试的根进程与后代均以无控制台方式启动，仍验证自然退出与强制停止后的真实回收。
+默认 Rust 套件不访问公网、不使用用户 runtime，也不要求 ffmpeg。平台测试通过真实 loopback HTTP 和生产解析路径，覆盖 51 个既有平台键的开播 / 未开播、支持的画质、畸形响应、登录失败与 Cookie 更新，并验证 SOOP 全球版、淘宝网页端和心动热播地址入口；签名使用独立上游向量校对。核心回归覆盖多时段监控、立即检测开关、通知业务确认、配置失败保持、探测取消、并发降限、stderr 洪泛、进程树回收和重复退出。进程树测试的根进程与后代均以无控制台方式启动，仍验证自然退出与强制停止后的真实回收。
 
 从仓库根目录执行真实媒体验收：
 
@@ -93,7 +95,7 @@ $env:PATH = "$ffmpegBin;$env:PATH"
 cargo test --manifest-path .\src\StreamRecorder.Tauri\src-tauri\Cargo.toml --bin StreamRecorder core::recording::tests -- --ignored --nocapture --test-threads=1
 ```
 
-CoreService 的真实录制烟测已通过有限 HTTP HLS、持续 HTTP FLV、TS/FLV/MKV/MOV/MP4/MP3/M4A、12 个 TS 分段及转 MP4，输出由 ffprobe 检查。同次有限 HLS 录制只请求一次首分片；慢探测和失效 webhook 下仍可保存、ping 和停止。
+CoreService 的真实录制烟测已通过有限 HTTP HLS、持续 HTTP FLV、TS/FLV/MKV/MOV/MP4/NUT/MP3/M4A、12 个 TS 分段及转 MP4，输出由 ffprobe 检查。同次有限 HLS 录制只请求一次首分片；慢探测和失效 webhook 下仍可保存、ping 和停止。
 
 HTTP 录制重试传输中断、TCP/TLS 连接错误及 HTTP 408、429、5xx；401/403 等非临时错误不重试。不启用 `reconnect_at_eof`，完整 HLS 分片和有限媒体读到 EOF 后正常结束。真实重连烟测覆盖首次 503 后恢复、FLV 响应中途截断后续传、有限 FLV 自然结束、403 不重试，以及连接拒绝后服务恢复；恢复后的媒体时长由 ffprobe 检查。无长度信息的 HTTP 流正常关闭连接时，单凭 EOF 无法区分下播与断线，仍按 EOF 结束，不进行盲目重连。
 
@@ -103,7 +105,7 @@ HTTP 录制重试传输中断、TCP/TLS 连接错误及 HTTP 408、429、5xx；4
 
 ## 平台边界
 
-保留固定 `streamget==4.0.10` 的 51 个平台键 / 50 个解析器，不使用 Python 回退。平台停运、接口改版、风控或缺少授权会返回具体错误，不能视为未开播或录制成功。离线夹具通过不代表全部平台的真实授权录制通过。
+原生解析基于 `streamget==4.0.10`，包含 52 个平台键 / 50 个解析器，不使用 Python 回退。支持 SOOP 全球版、淘宝网页端与心动热播地址；花椒主播分享链接和 Shopee 使用 App 流，抖音普通及 VR 房间沿用网页接口（VR 地址须为 `https://live.douyin.com/抖音号`）。千度热播、WinkTV、音播和飘飘标记为已废弃，保留历史任务识别。平台停运、接口改版、风控或缺少授权会返回具体错误，不能视为未开播或录制成功。离线夹具通过不代表全部平台的真实授权录制通过。
 旧任务链接按旧解析器处理空查询参数与备用 ID（例如淘宝 `id` 回退到 `liveId`、京东空 `authorId` 回退到直播间片段）。小红书先检查 `/livestream/...` 直播页；页面明确当前房间已结束时返回未开播及当前主播信息，不使用推荐直播数据。只有个人主页回退才要求主播 ID，缺少可判定的直播数据时仍报告解析错误。
 
 离线元数据沿用旧解析器的空值契约：网易 CC 缺昵称、Bigo/ShowRoom 昵称为 `null` 时保留任务原名；六间房显式 `flvtitle=null` 表示没有直播流；VVXQ 的空昵称继续走备用查询。缺少必要状态、响应结构损坏及网络错误仍返回错误，不伪装为未开播。

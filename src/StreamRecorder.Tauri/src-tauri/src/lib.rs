@@ -24,6 +24,7 @@ pub struct DesktopState {
     exit_request: Mutex<Option<String>>,
     exiting: AtomicBool,
     pub tray: AtomicUsize,
+    pub window_state: Mutex<ui_state::WindowState>,
 }
 #[tauri::command]
 async fn health_ping(state: State<'_, DesktopState>) -> Result<PingReply, String> {
@@ -231,6 +232,10 @@ async fn shutdown(app: &tauri::AppHandle) {
     if state.exiting.swap(true, Ordering::AcqRel) {
         return;
     }
+    let path = state.paths.data_root.join("window_state.json");
+    let geometry = *state.window_state.lock();
+    let result = tokio::task::spawn_blocking(move || core::config::save_json(&path, &geometry, false)).await;
+    if let Ok(Err(error)) = result { state.core.log(&format!("窗口尺寸保存失败：{error}")); }
     state.core.shutdown().await;
     desktop::stop_tray(state.tray.swap(0, Ordering::AcqRel));
     app.exit(0);
@@ -289,6 +294,7 @@ pub fn run() {
                 exit_request: Mutex::new(None),
                 exiting: AtomicBool::new(false),
                 tray: AtomicUsize::new(0),
+                window_state: Mutex::new(ui_state::load_window(&paths.data_root.join("window_state.json"))),
             });
             let icon_path = paths.data_root.join("app.ico");
             std::fs::write(&icon_path, include_bytes!("../icons/StreamRecorder.ico"))?;
@@ -340,14 +346,23 @@ pub fn run() {
                             begin_exit(&handle)
                         }
                     }
-                    tauri::WindowEvent::Resized(_) => {
-                        let minimize = state.core.minimize_to_tray();
-                        if minimize
-                            && handle
-                                .get_webview_window("main")
-                                .is_some_and(|w| w.is_minimized().unwrap_or(false))
-                        {
-                            desktop::hide(&handle, false)
+                    tauri::WindowEvent::Resized(size) => {
+                        if let Some(window) = handle.get_webview_window("main") {
+                            if window.is_minimized().unwrap_or(false) {
+                                if state.core.minimize_to_tray() {
+                                    desktop::hide(&handle, false);
+                                }
+                            } else {
+                                let mut geometry = state.window_state.lock();
+                                geometry.maximized = window.is_maximized().unwrap_or(false);
+                                if !geometry.maximized {
+                                    if let Ok(scale) = window.scale_factor() {
+                                        let logical = size.to_logical::<f64>(scale);
+                                        geometry.width = logical.width;
+                                        geometry.height = logical.height;
+                                    }
+                                }
+                            }
                         }
                     }
                     _ => {}

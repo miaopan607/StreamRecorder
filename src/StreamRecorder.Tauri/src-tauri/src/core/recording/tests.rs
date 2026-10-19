@@ -246,6 +246,7 @@ async fn ffmpeg_smoke() {
         ("MKV", "matroska"),
         ("MOV", "mov"),
         ("MP4", "mp4"),
+        ("NUT", "nut"),
         ("MP3", "mp3"),
         ("M4A", "m4a"),
     ] {

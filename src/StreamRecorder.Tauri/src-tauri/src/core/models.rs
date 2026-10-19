@@ -2,6 +2,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::BTreeMap;
 pub const STOPPED: &str = "已停止";
+pub const SCHEDULED: &str = "等待定时";
 pub const MONITORING: &str = "监控中";
 pub const CHECKING: &str = "检测中";
 pub const RECORDING: &str = "录制中";
@@ -27,6 +28,7 @@ pub struct CoreSettings {
     pub video_format: String,
     pub record_quality: String,
     pub loop_time_seconds: String,
+    pub check_on_create: bool,
     pub segmented_recording_enabled: bool,
     pub force_https_recording: bool,
     pub default_live_source: String,
@@ -55,6 +57,7 @@ pub struct CoreSettings {
     pub custom_stream_error_content: String,
     pub dingtalk_enabled: bool,
     pub wechat_enabled: bool,
+    pub feishu_enabled: bool,
     pub bark_enabled: bool,
     pub ntfy_enabled: bool,
     pub serverchan_enabled: bool,
@@ -64,6 +67,7 @@ pub struct CoreSettings {
     pub dingtalk_at_objects: String,
     pub dingtalk_at_all: bool,
     pub wechat_webhook_url: String,
+    pub feishu_webhook_url: String,
     pub bark_webhook_url: String,
     pub bark_interrupt_level: String,
     pub bark_sound: String,
@@ -108,6 +112,7 @@ impl Default for CoreSettings {
             video_format: "TS".into(),
             record_quality: "OD".into(),
             loop_time_seconds: "180".into(),
+            check_on_create: true,
             segmented_recording_enabled: true,
             force_https_recording: true,
             default_live_source: "FLV".into(),
@@ -136,6 +141,7 @@ impl Default for CoreSettings {
             custom_stream_error_content: "".into(),
             dingtalk_enabled: false,
             wechat_enabled: false,
+            feishu_enabled: false,
             bark_enabled: false,
             ntfy_enabled: false,
             serverchan_enabled: false,
@@ -145,6 +151,7 @@ impl Default for CoreSettings {
             dingtalk_at_objects: "".into(),
             dingtalk_at_all: false,
             wechat_webhook_url: "".into(),
+            feishu_webhook_url: "".into(),
             bark_webhook_url: "".into(),
             bark_interrupt_level: "active".into(),
             bark_sound: "".into(),
@@ -232,6 +239,39 @@ impl Default for JobInput {
         }
     }
 }
+
+impl JobInput {
+    // 每天的多个时间段按位置对应时长；仍接受已有的单次日期时间。
+    pub fn in_monitor_window(&self, now: chrono::NaiveDateTime) -> bool {
+        if !self.scheduled_recording {
+            return true;
+        }
+        self.scheduled_start_time.split(',').zip(self.monitor_hours.split(',')).any(|(start, hours)| {
+            let Some(hours) = hours.trim().parse::<f64>().ok()
+                .filter(|value| value.is_finite() && *value > 0.0) else {
+                return false;
+            };
+            let Some(duration) = chrono::Duration::try_seconds((hours * 3600.0) as i64) else {
+                return false;
+            };
+            let start = start.trim();
+            if let Ok(start) = chrono::NaiveDateTime::parse_from_str(start, "%Y-%m-%d %H:%M:%S") {
+                return now >= start && now.signed_duration_since(start) < duration;
+            }
+            let Ok(time) = chrono::NaiveTime::parse_from_str(start, "%H:%M:%S")
+                .or_else(|_| chrono::NaiveTime::parse_from_str(start, "%H:%M")) else {
+                return false;
+            };
+            let today = now.date().and_time(time);
+            let elapsed = if now >= today {
+                now.signed_duration_since(today)
+            } else {
+                now.signed_duration_since(today - chrono::Duration::days(1))
+            };
+            elapsed < duration
+        })
+    }
+}
 #[derive(Clone, Debug, Serialize)]
 pub struct RecordingJob {
     #[serde(flatten)]
@@ -311,7 +351,11 @@ impl RecordingJob {
         }
         if self.recording_started_at.is_empty() {
             self.status_info = if self.input.monitor_status {
-                MONITORING
+                if self.input.in_monitor_window(chrono::Local::now().naive_local()) {
+                    MONITORING
+                } else {
+                    SCHEDULED
+                }
             } else {
                 STOPPED
             }
@@ -380,4 +424,43 @@ pub struct CoreBootstrap {
     pub cookies: BTreeMap<String, String>,
     pub accounts: BTreeMap<String, Value>,
     pub logs: Vec<String>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    fn at(value: &str) -> chrono::NaiveDateTime {
+        chrono::NaiveDateTime::parse_from_str(value, "%Y-%m-%d %H:%M:%S").unwrap()
+    }
+    #[test]
+    fn daily_monitor_windows_repeat_and_cross_midnight() {
+        let input = JobInput {
+            scheduled_recording: true,
+            scheduled_start_time: "09:00:00,23:30:00".into(),
+            monitor_hours: "1.5,2".into(),
+            ..JobInput::default()
+        };
+        for value in ["2026-10-19 09:00:00", "2026-10-19 10:29:59", "2026-10-20 00:30:00", "2026-10-20 09:15:00"] {
+            assert!(input.in_monitor_window(at(value)), "{value}");
+        }
+        for value in ["2026-10-19 08:59:59", "2026-10-19 10:30:00", "2026-10-20 01:30:00"] {
+            assert!(!input.in_monitor_window(at(value)), "{value}");
+        }
+    }
+    #[test]
+    fn single_date_monitor_window_does_not_repeat() {
+        let mut input = JobInput {
+            scheduled_recording: true,
+            scheduled_start_time: "2026-10-19 23:30:00".into(),
+            monitor_hours: "2".into(),
+            ..JobInput::default()
+        };
+        assert!(input.in_monitor_window(at("2026-10-20 00:30:00")));
+        assert!(!input.in_monitor_window(at("2026-10-21 00:30:00")));
+        input.scheduled_start_time = "invalid,09:00".into();
+        input.monitor_hours = "2,1".into();
+        assert!(input.in_monitor_window(at("2026-10-20 09:30:00")));
+        input.monitor_hours = "2".into();
+        assert!(!input.in_monitor_window(at("2026-10-20 09:30:00")));
+    }
 }

@@ -46,17 +46,25 @@ pub fn save(path: &Path, state: &UiState) -> Result<(), String> {
         .unwrap_or(json!({}));
     payload["IsCardLayout"] = json!(state.is_card_layout);
     payload["VisibleColumns"] = json!(state.visible_columns);
-    if let Some(parent) = path.parent() {
-        fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+    crate::core::config::save_json(path, &payload, false)
+}
+
+#[derive(Clone, Copy, Debug, Serialize, Deserialize)]
+#[serde(default)]
+pub struct WindowState {
+    pub width: f64,
+    pub height: f64,
+    pub maximized: bool,
+}
+impl Default for WindowState {
+    fn default() -> Self {
+        Self { width: 1380.0, height: 860.0, maximized: false }
     }
-    let temp = path.with_extension("json.tmp");
-    fs::write(
-        &temp,
-        serde_json::to_vec_pretty(&payload).map_err(|e| e.to_string())?,
-    )
-    .map_err(|e| e.to_string())?;
-    crate::core::config::replace_file(&temp, path)?;
-    Ok(())
+}
+pub fn load_window(path: &Path) -> WindowState {
+    fs::read(path).ok()
+        .and_then(|bytes| serde_json::from_slice(&bytes).ok())
+        .unwrap_or_default()
 }
 #[cfg(test)]
 mod tests {

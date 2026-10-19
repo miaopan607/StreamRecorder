@@ -959,3 +959,21 @@ async fn cancellation_closes_pending_http_request() {
     assert!(result.unwrap_err().contains("探测已取消"));
     peer.join().unwrap();
 }
+
+#[tokio::test]
+async fn release_platform_urls_reach_their_parsers() {
+    for (platform, url, corpus, source) in [
+        ("soop", "https://play.sooplive.com/user/123", CORPORA[3], "soop"),
+        ("taobao", "https://tbzb.taobao.com/live?liveId=10001", CORPORA[4], "taobao"),
+        ("xindongrebo", "https://xcqrkj.com/10001", CORPORA[0], "qiandurebo"),
+    ] {
+        let fixture = serde_json::from_str::<Vec<Fixture>>(corpus).unwrap()
+            .into_iter().find(|fixture| fixture.platform == source).unwrap();
+        let job = super::super::models::RecordingJob::new(JobInput {
+            url: url.into(), ..JobInput::default()
+        });
+        assert_eq!(job.platform_key, platform);
+        let stream = run_probe(&job.platform_key, url, fixture.live).await.unwrap();
+        compare(platform, &serde_json::to_value(stream).unwrap(), &fixture.expected_live);
+    }
+}

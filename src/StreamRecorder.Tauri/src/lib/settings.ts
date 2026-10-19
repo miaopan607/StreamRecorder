@@ -42,6 +42,7 @@ export const recordingSections: SettingSection[] = [
       field("enable_proxy", "启用代理"),
       field("proxy_address", "代理地址"),
       field("loop_time_seconds", "轮询间隔（秒）"),
+      field("check_on_create", "新增任务后立即检测"),
       field("default_platform_with_proxy", "默认代理平台（逗号分隔）"),
       field("platform_max_concurrent_requests", "平台并发数"),
     ],
@@ -134,6 +135,13 @@ export const notificationSections: SettingSection[] = [
     fields: [
       field("wechat_enabled", "启用企业微信"),
       field("wechat_webhook_url", "企业微信 Webhook", { secret: true }),
+    ],
+  },
+  {
+    title: "飞书",
+    fields: [
+      field("feishu_enabled", "启用飞书"),
+      field("feishu_webhook_url", "飞书 Webhook", { secret: true }),
     ],
   },
   {
@@ -232,6 +240,7 @@ export const cookiePlatforms = [
   "youtube",
   "taobao",
   "jd",
+  "xindongrebo",
 ];
 export const accountKeys = [
   "sooplive_username",

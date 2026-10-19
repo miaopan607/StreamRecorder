@@ -147,6 +147,8 @@ impl NotificationService {
         let explicit = response.get("success").and_then(Value::as_bool) == Some(true);
         let success = match channel {
             "钉钉" => response.get("errcode").and_then(Value::as_i64) == Some(0) || explicit,
+            "飞书" => response.get("code").and_then(Value::as_i64) == Some(0)
+                || response.get("StatusCode").and_then(Value::as_i64) == Some(0),
             "微信" | "Bark" => {
                 response.get("code").and_then(Value::as_i64) == Some(200) || explicit
             }
@@ -190,6 +192,11 @@ impl NotificationService {
             "钉钉" => {
                 for url in entries(&settings.dingtalk_webhook_url) {
                     requests.push((url.to_owned(),json!({"msgtype":"text","text":{"content":content},"at":{"atMobiles":if settings.dingtalk_at_objects.is_empty(){Vec::<&str>::new()}else{vec![settings.dingtalk_at_objects.as_str()]},"isAtAll":settings.dingtalk_at_all}})));
+                }
+            }
+            "飞书" => {
+                for url in entries(&settings.feishu_webhook_url) {
+                    requests.push((url.to_owned(), json!({"msg_type":"text","content":{"text":content}})));
                 }
             }
             "微信" => {
@@ -298,6 +305,7 @@ impl NotificationService {
         let channels = [
             ("钉钉", settings.dingtalk_enabled),
             ("微信", settings.wechat_enabled),
+            ("飞书", settings.feishu_enabled),
             ("Bark", settings.bark_enabled),
             ("ntfy", settings.ntfy_enabled),
             ("Telegram", settings.telegram_enabled),
@@ -377,45 +385,66 @@ mod tests {
     };
     #[tokio::test]
     async fn http_success_requires_business_ack_and_redacts_message() {
-        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
-        let endpoint = format!("http://{}", listener.local_addr().unwrap());
-        let server = tokio::spawn(async move {
-            let (stream, _) = listener.accept().await.unwrap();
-            let mut reader = BufReader::new(stream);
-            let mut line = String::new();
-            reader.read_line(&mut line).await.unwrap();
-            let mut length = 0;
-            loop {
-                line.clear();
+        for (channel, body, code) in [
+            ("Bark", r#"{"code":401,"message":"fixture-sensitive-token"}"#, Some("401")),
+            ("飞书", r#"{"code":19024,"msg":"fixture-sensitive-token"}"#, Some("19024")),
+            ("飞书", r#"{"code":0}"#, None),
+        ] {
+            let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+            let endpoint = format!("http://{}", listener.local_addr().unwrap());
+            let server = tokio::spawn(async move {
+                let (stream, _) = listener.accept().await.unwrap();
+                let mut reader = BufReader::new(stream);
+                let mut line = String::new();
                 reader.read_line(&mut line).await.unwrap();
-                if line == "\r\n" {
-                    break;
-                }
-                if let Some((key, value)) = line.split_once(':') {
-                    if key.eq_ignore_ascii_case("content-length") {
-                        length = value.trim().parse().unwrap();
+                let mut length = 0;
+                loop {
+                    line.clear();
+                    reader.read_line(&mut line).await.unwrap();
+                    if line == "\r\n" {
+                        break;
+                    }
+                    if let Some((key, value)) = line.split_once(':') {
+                        if key.eq_ignore_ascii_case("content-length") {
+                            length = value.trim().parse().unwrap();
+                        }
                     }
                 }
+                let mut bytes = vec![0; length];
+                reader.read_exact(&mut bytes).await.unwrap();
+                let header=format!("HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",body.len());
+                let mut stream = reader.into_inner();
+                stream.write_all(header.as_bytes()).await.unwrap();
+                stream.write_all(body.as_bytes()).await.unwrap();
+            });
+            let settings = CoreSettings {
+                bark_enabled: channel == "Bark",
+                bark_webhook_url: endpoint.clone(),
+                feishu_enabled: channel == "飞书",
+                feishu_webhook_url: endpoint,
+                stream_start_notification_enabled: true,
+                system_notification_enabled: false,
+                ..CoreSettings::default()
+            };
+            let service = Arc::new(NotificationService::default());
+            let errors = service.send(
+                Arc::new(settings),
+                RecordingJob::new(super::super::models::JobInput::default()),
+                NotificationEvent::Start, None, CancellationToken::new(),
+            ).await;
+            if let Some(code) = code {
+                assert_eq!(errors.len(), 1);
+                assert!(errors[0].contains(code));
+                assert!(!errors[0].contains("fixture-sensitive-token"));
+            } else {
+                assert!(errors.is_empty(), "{errors:?}");
             }
-            let mut bytes = vec![0; length];
-            reader.read_exact(&mut bytes).await.unwrap();
-            let body = r#"{"code":401,"message":"fixture-sensitive-token"}"#;
-            let header=format!("HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",body.len());
-            let mut stream = reader.into_inner();
-            stream.write_all(header.as_bytes()).await.unwrap();
-            stream.write_all(body.as_bytes()).await.unwrap();
-        });
-        let settings = CoreSettings {
-            bark_webhook_url: endpoint,
-            ..CoreSettings::default()
-        };
-        let service = NotificationService::default();
-        let error = service
-            .channel("Bark", &settings, "测试", "内容")
-            .await
-            .unwrap_err();
-        assert!(error.contains("401"));
-        assert!(!error.contains("fixture-sensitive-token"));
-        server.await.unwrap();
+            server.await.unwrap();
+        }
+    }
+    #[test]
+    fn feishu_requires_business_success() {
+        assert!(NotificationService::acknowledge("飞书", &json!({"StatusCode":0})).is_ok());
+        assert!(NotificationService::acknowledge("飞书", &json!({"success":true})).is_err());
     }
 }

@@ -1,10 +1,10 @@
 use crate::core::probe::*;
 pub(super) async fn probe(ctx: &ProbeContext, input: &ProbeInput) -> Result<StreamData, String> {
-    match web(ctx, input).await {
-        Ok(data) => Ok(data),
-        Err(web_error) => app(ctx, input)
-            .await
-            .map_err(|app_error| format!("web: {web_error}; app: {app_error}")),
+    // 主播分享地址使用 App 流；旧 liveid 地址继续按房间解析。
+    if query(&input.live_url, "author").is_ok() {
+        app(ctx, input).await
+    } else {
+        web(ctx, input).await
     }
 }
 async fn web(ctx: &ProbeContext, input: &ProbeInput) -> Result<StreamData, String> {

@@ -120,19 +120,11 @@
     "url": "https://www.huajiao.com/share?liveid=1&author=1&from=web",
     "live": [
       {
-        "path": "/feed/getFeedInfo",
-        "body": "{\"errmsg\":\"\",\"data\":{\"creatime\":123,\"author\":{\"nickname\":\"主播\",\"uid\":1},\"feed\":{\"title\":\"标题\",\"sn\":\"sn\",\"relateid\":1}}}"
-      },
-      {
-        "path": "/live/substream",
-        "body": "{\"data\":{\"h264_url\":\"https://media.example/live.flv\",\"pull_m3u8\":\"https://media.example/master.m3u8\"}}"
+        "path": "/feed/getUserFeeds",
+        "body": "{\"data\":{\"feeds\":[{\"author\":{\"nickname\":\"主播\"},\"feed\":{\"rtop\":\"直播中\",\"pull_url\":\"https://media.example/live.flv?app=1\",\"encode\":\"h264\"}}]}}"
       }
     ],
     "offline": [
-      {
-        "path": "/feed/getFeedInfo",
-        "body": "{\"errmsg\":\"expired\",\"data\":{}}"
-      },
       {
         "path": "/feed/getUserFeeds",
         "body": "{\"data\":{\"feeds\":[{\"author\":{\"nickname\":\"主播\"},\"feed\":{\"rtop\":\"未开播\"}}]}}"
@@ -141,8 +133,7 @@
     "expected_live": {
       "is_live": true,
       "anchor_name": "主播",
-      "title": "标题",
-      "record_url": "https://media.example/live.flv"
+      "record_url": "https://media.example/live.flv?app=1&codec=h264"
     },
     "expected_offline": {
       "is_live": false,
