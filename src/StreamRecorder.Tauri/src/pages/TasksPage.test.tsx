@@ -134,23 +134,23 @@ it.each([
     expect(remove.disabled).toBe(true);
 
     fireEvent.click(firstEntry);
-    fireEvent.click(secondEntry.querySelector(".job-actions")!);
+    fireEvent.click(within(secondEntry).getByRole("button", { name: "监控" }));
     expect(first.checked).toBe(true);
-    expect(second.checked).toBe(true);
-    expect(view.getByText("已选 2 项")).toBeDefined();
+    expect(second.checked).toBe(false);
+    expect(view.getByText("已选 1 项")).toBeDefined();
 
     fireEvent.click(first);
     expect(first.checked).toBe(false);
-    expect(second.checked).toBe(true);
-    fireEvent.click(second);
     expect(second.checked).toBe(false);
-    expect(remove.disabled).toBe(true);
+    fireEvent.click(secondEntry);
+    expect(second.checked).toBe(true);
+    expect(remove.disabled).toBe(false);
 
     remote.call.mockResolvedValue({});
     await act(async () => {
       fireEvent.click(within(firstEntry).getByRole("button", { name: "监控" }));
     });
-    expect(first.checked).toBe(true);
+    expect(first.checked).toBe(false);
     await act(async () => {
       fireEvent.click(within(firstEntry).getByRole("button", { name: "监控" }));
     });

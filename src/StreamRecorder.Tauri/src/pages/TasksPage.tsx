@@ -80,7 +80,7 @@ export default function TasksPage() {
   function actions(job: Job) {
     const disabled = !connected || busy.has(job.id) || busy.has("batch");
     return (
-      <div className="job-actions">
+      <div className="job-actions" onClick={(event) => event.stopPropagation()}>
         <button disabled={disabled} onClick={() => setEditor(job)}>
           编辑
         </button>
