@@ -362,12 +362,12 @@ small {
   background: currentColor;
 }
 .status.recording {
-  color: var(--error);
-  background: color-mix(in srgb, var(--error) 10%, var(--surface));
-}
-.status.monitoring {
   color: var(--success);
   background: color-mix(in srgb, var(--success) 10%, var(--surface));
+}
+.status.monitoring {
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 10%, var(--surface));
 }
 .status.failed {
   color: var(--error);
