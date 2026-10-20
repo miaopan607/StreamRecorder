@@ -5,7 +5,7 @@ use crate::core::{
 };
 use parking_lot::Mutex;
 use serde_json::Value;
-use std::{collections::HashMap, time::Duration};
+use std::{collections::HashMap, fs, time::Duration};
 use tokio::{
     io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader},
     net::{TcpListener, TcpStream},
@@ -41,8 +41,14 @@ impl MediaServer {
             .args(["-c", "copy", "-f", "flv", "pipe:1"])
             .kill_on_drop(true)
             .creation_flags(0x08000000)
-            .output().await.unwrap();
-        assert!(flv.status.success(), "{}", String::from_utf8_lossy(&flv.stderr));
+            .output()
+            .await
+            .unwrap();
+        assert!(
+            flv.status.success(),
+            "{}",
+            String::from_utf8_lossy(&flv.stderr)
+        );
         files.insert("/finite.flv".into(), flv.stdout);
         let files = Arc::new(files);
         let url = format!("http://{}", listener.local_addr().unwrap());
@@ -426,43 +432,81 @@ async fn http_reconnect_smoke() {
     settings.convert_to_mp4 = false;
     settings.system_notification_enabled = false;
     core.settings_update(settings).await.unwrap();
-    let source = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../../artifacts/tauri-smoke-media/live0.ts");
+    let source = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("../../../artifacts/tauri-smoke-media/live0.ts");
     let reference = inspect(&binary, &source).await;
-    let reference_duration: f64 = reference["format"]["duration"].as_str().unwrap().parse().unwrap();
+    let reference_duration: f64 = reference["format"]["duration"]
+        .as_str()
+        .unwrap()
+        .parse()
+        .unwrap();
     for (path, expected_duration) in [
         ("retry.m3u8", reference_duration * 12.0),
         ("disconnect.flv", reference_duration),
         ("finite.flv", reference_duration),
     ] {
         let first = server.count("/live0.ts");
-        let id = core.jobs_upsert(vec![JobInput {
-            url: format!("{}/{path}", server.url),
-            recording_dir: path.into(),
-            ..JobInput::default()
-        }]).await.unwrap().changed_ids[0].clone();
+        let id = core
+            .jobs_upsert(vec![JobInput {
+                url: format!("{}/{path}", server.url),
+                recording_dir: path.into(),
+                ..JobInput::default()
+            }])
+            .await
+            .unwrap()
+            .changed_ids[0]
+            .clone();
         let output = completed(&core, &id).await;
         let media = inspect(&binary, &output).await;
-        let duration: f64 = media["format"]["duration"].as_str().unwrap().parse().unwrap();
-        assert!((duration - expected_duration).abs() < 1.0, "{path}：期望 {expected_duration}s，实际 {duration}s");
+        let duration: f64 = media["format"]["duration"]
+            .as_str()
+            .unwrap()
+            .parse()
+            .unwrap();
+        assert!(
+            (duration - expected_duration).abs() < 1.0,
+            "{path}：期望 {expected_duration}s，实际 {duration}s"
+        );
         if path == "retry.m3u8" {
-            assert_eq!(server.count("/retry.m3u8"), 2, "503 恢复后不应在 EOF 时重复请求清单");
+            assert_eq!(
+                server.count("/retry.m3u8"),
+                2,
+                "503 恢复后不应在 EOF 时重复请求清单"
+            );
         }
-        assert_eq!(server.count("/live0.ts") - first, usize::from(path == "retry.m3u8"), "完整 HLS 分片不应在 EOF 时重播");
+        assert_eq!(
+            server.count("/live0.ts") - first,
+            usize::from(path == "retry.m3u8"),
+            "完整 HLS 分片不应在 EOF 时重播"
+        );
         assert_ne!(core.job(&id).unwrap().status_info, ERROR);
         core.jobs_stop_monitoring(vec![id]).await.unwrap();
         println!("{path}：恢复后正常结束，{duration:.3}s");
     }
-    let id = core.jobs_upsert(vec![JobInput {
-        url: format!("{}/forbidden.flv", server.url),
-        ..JobInput::default()
-    }]).await.unwrap().changed_ids[0].clone();
+    let id = core
+        .jobs_upsert(vec![JobInput {
+            url: format!("{}/forbidden.flv", server.url),
+            ..JobInput::default()
+        }])
+        .await
+        .unwrap()
+        .changed_ids[0]
+        .clone();
     tokio::time::timeout(Duration::from_secs(10), async {
         loop {
-            if core.job(&id).unwrap().status_info == ERROR { break; }
+            if core.job(&id).unwrap().status_info == ERROR {
+                break;
+            }
             tokio::time::sleep(Duration::from_millis(10)).await;
         }
-    }).await.unwrap();
-    assert_eq!(server.count("/forbidden.flv"), 1, "403 不应作为临时错误重试");
+    })
+    .await
+    .unwrap();
+    assert_eq!(
+        server.count("/forbidden.flv"),
+        1,
+        "403 不应作为临时错误重试"
+    );
     println!("403：错误可见，未重试");
     core.shutdown().await;
     server.close().await;
@@ -473,18 +517,58 @@ async fn http_reconnect_smoke() {
     drop(listener);
     let output = directory.path().join("network.ts");
     let mut command = ffmpeg_command(
-        &binary, &format!("http://{address}/finite.flv"), &output,
-        "ts", false, "1800", None,
-    ).unwrap();
+        &binary,
+        &format!("http://{address}/finite.flv"),
+        &output,
+        "ts",
+        false,
+        "1800",
+        None,
+    )
+    .unwrap();
     let process = ManagedProcess::spawn(&mut command).await.unwrap();
     tokio::time::sleep(Duration::from_secs(2)).await;
     let listener = TcpListener::bind(address).await.unwrap();
     let server = MediaServer::with_listener(binary.clone(), listener).await;
-    let result = tokio::time::timeout(Duration::from_secs(15), process.wait()).await.unwrap().unwrap();
+    let result = tokio::time::timeout(Duration::from_secs(15), process.wait())
+        .await
+        .unwrap()
+        .unwrap();
     assert!(result.success, "连接恢复后仍录制失败：{}", result.stderr);
     let media = inspect(&binary, &output).await;
-    let duration: f64 = media["format"]["duration"].as_str().unwrap().parse().unwrap();
-    assert!((duration - reference_duration).abs() < 1.0, "连接恢复后的录制不完整：{duration}s");
+    let duration: f64 = media["format"]["duration"]
+        .as_str()
+        .unwrap()
+        .parse()
+        .unwrap();
+    assert!(
+        (duration - reference_duration).abs() < 1.0,
+        "连接恢复后的录制不完整：{duration}s"
+    );
     println!("TCP 连接拒绝：恢复后录制成功并自然结束，{duration:.3}s");
     server.close().await;
+}
+
+#[test]
+fn recover_latest_output_scans_matching_recordings() {
+    let directory = tempfile::tempdir().unwrap();
+    let paths = ProjectPaths::at(directory.path().to_owned());
+    let mut settings = CoreSettings::default();
+    settings.folder_name_platform = false;
+    settings.folder_name_author = false;
+    settings.custom_filename_template = "{anchor_name}_{time}".into();
+    let job = RecordingJob::new(JobInput {
+        streamer_name: "主播".into(),
+        url: "https://live.bilibili.com/1".into(),
+        ..JobInput::default()
+    });
+    let folder = paths.data_root.join("recordings").join("旧日期");
+    fs::create_dir_all(&folder).unwrap();
+    let older = folder.join("主播_较早.ts");
+    let newer = folder.join("主播_较新.ts");
+    fs::write(&older, b"old").unwrap();
+    std::thread::sleep(Duration::from_millis(20));
+    fs::write(&newer, b"new").unwrap();
+
+    assert_eq!(recover_latest_output(&paths, &settings, &job), Some(newer));
 }

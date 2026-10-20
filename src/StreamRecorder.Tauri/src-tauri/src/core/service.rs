@@ -125,11 +125,13 @@ impl CoreData {
                 .runtime
                 .get(id)
                 .is_some_and(|runtime| runtime.generation == generation)
-            && self
-                .jobs
-                .iter()
-                .any(|job| job.id() == id && job.input.monitor_status
-                    && job.input.in_monitor_window(chrono::Local::now().naive_local()))
+            && self.jobs.iter().any(|job| {
+                job.id() == id
+                    && job.input.monitor_status
+                    && job
+                        .input
+                        .in_monitor_window(chrono::Local::now().naive_local())
+            })
     }
     fn invalidate(&mut self, id: &str, root: &CancellationToken) {
         if let Some(runtime) = self.runtime.get_mut(id) {
@@ -156,7 +158,10 @@ impl CoreData {
                 continue;
             };
             if !job.input.in_monitor_window(now) {
-                if runtime.recording.is_none() && runtime.checking.is_none() && job.status_info != SCHEDULED {
+                if runtime.recording.is_none()
+                    && runtime.checking.is_none()
+                    && job.status_info != SCHEDULED
+                {
                     job.status_info = SCHEDULED.into();
                     status_changed = true;
                 }
@@ -261,11 +266,12 @@ impl CoreService {
     }
     pub fn tray_notification_enabled(&self, closing: bool) -> bool {
         let data = self.data.lock();
-        data.settings.system_notification_enabled && if closing {
-            data.settings.system_close_to_tray_notification_enabled
-        } else {
-            data.settings.system_minimize_to_tray_notification_enabled
-        }
+        data.settings.system_notification_enabled
+            && if closing {
+                data.settings.system_close_to_tray_notification_enabled
+            } else {
+                data.settings.system_minimize_to_tray_notification_enabled
+            }
     }
     pub fn connection(&self) -> CoreState {
         self.data.lock().connection.clone()
@@ -277,6 +283,24 @@ impl CoreService {
             .iter()
             .find(|job| job.id() == id)
             .cloned()
+    }
+    pub fn remember_latest_output(&self, id: &str, previous: &str, path: PathBuf) {
+        let value = path.to_string_lossy().into_owned();
+        let snapshot = {
+            let mut data = self.data.lock();
+            let Some(job) = data.jobs.iter_mut().find(|job| job.id() == id) else {
+                return;
+            };
+            if !job.latest_output_path.is_empty() && job.latest_output_path != previous {
+                return;
+            }
+            if job.latest_output_path == value {
+                return;
+            }
+            job.latest_output_path = value;
+            data.changed()
+        };
+        self.publish(snapshot);
     }
     fn publish(&self, snapshot: Snapshot) {
         if let Some(app) = &self.app {
@@ -326,10 +350,22 @@ impl CoreService {
     }
     pub async fn start(self: &Arc<Self>) -> Result<(), String> {
         let store = ConfigStore::new(self.paths.data_root.clone());
+        let paths = self.paths.clone();
         let loading = tokio::task::spawn_blocking(move || {
             let mut logs = Vec::new();
             let settings = store.load::<CoreSettings>("core_settings.json", &mut logs)?;
-            let jobs = store.load::<Vec<JobInput>>("jobs.json", &mut logs)?;
+            let inputs = store.load::<Vec<JobInput>>("jobs.json", &mut logs)?;
+            let mut jobs = inputs
+                .into_iter()
+                .map(RecordingJob::new)
+                .collect::<Vec<_>>();
+            for job in &mut jobs {
+                if job.latest_output_path.is_empty() {
+                    if let Some(path) = recording::recover_latest_output(&paths, &settings, job) {
+                        job.latest_output_path = path.to_string_lossy().into_owned();
+                    }
+                }
+            }
             let cookies = store.load::<BTreeMap<String, String>>("cookies.json", &mut logs)?;
             let accounts = store.load::<BTreeMap<String, Value>>("accounts.json", &mut logs)?;
             Ok::<_, String>((
@@ -360,7 +396,7 @@ impl CoreService {
                 return Err("核心服务已启动或正在退出".into());
             }
             data.settings = settings;
-            data.jobs = jobs.into_iter().map(RecordingJob::new).collect();
+            data.jobs = jobs;
             data.cookies = cookies;
             data.accounts = accounts;
             data.ffmpeg_available = ffmpeg;
@@ -552,9 +588,7 @@ impl CoreService {
                         .position(|job| job.id.as_deref() == Some(candidate.id()))
                         .or_else(|| {
                             let url = candidate.input.url.to_lowercase();
-                            desired.iter().position(|job| {
-                                job.url.to_lowercase() == url
-                            })
+                            desired.iter().position(|job| job.url.to_lowercase() == url)
                         });
                     if let Some(index) = existing {
                         candidate.input.id = desired[index].id.clone();
@@ -579,7 +613,13 @@ impl CoreService {
                         data.invalidate(&id, &core.cancel);
                         if !input.monitor_status {
                             if let Some(runtime) = data.runtime.get(&id) {
-                                stops.push((runtime.lifecycle.clone(), runtime.recording.as_ref().map(|recording| recording.process.clone())));
+                                stops.push((
+                                    runtime.lifecycle.clone(),
+                                    runtime
+                                        .recording
+                                        .as_ref()
+                                        .map(|recording| recording.process.clone()),
+                                ));
                             }
                         }
                         if let Some(job) = data.jobs.iter_mut().find(|job| job.id() == id) {
@@ -587,7 +627,9 @@ impl CoreService {
                             job.last_checked_at.clear();
                             job.error_message.clear();
                             job.refresh(true);
-                            if !job.input.monitor_status { job.status_info = STOPPED.into(); }
+                            if !job.input.monitor_status {
+                                job.status_info = STOPPED.into();
+                            }
                         } else {
                             data.runtime
                                 .insert(id, JobRuntime::new(core.cancel.child_token()));
@@ -621,7 +663,8 @@ impl CoreService {
                 let (desired, deleted) = {
                     let data = core.data.lock();
                     data.ready()?;
-                    let desired = data.jobs
+                    let desired = data
+                        .jobs
                         .iter()
                         .filter(|job| !ids.iter().any(|id| id == job.id()))
                         .map(|job| job.input.clone())
@@ -782,7 +825,9 @@ impl CoreService {
             let (queued_ids, status_changed) = data.enqueue(&ids, ids.is_empty());
             (queued_ids, status_changed.then(|| data.changed()))
         };
-        if let Some(snapshot) = snapshot { self.publish(snapshot); }
+        if let Some(snapshot) = snapshot {
+            self.publish(snapshot);
+        }
         self.wake.notify_one();
         Ok(RecheckReply { queued_ids })
     }
@@ -816,7 +861,9 @@ impl CoreService {
                 let (_, status_changed) = data.enqueue(&ids, false);
                 status_changed.then(|| data.changed())
             };
-            if let Some(snapshot) = snapshot { self.publish(snapshot); }
+            if let Some(snapshot) = snapshot {
+                self.publish(snapshot);
+            }
             self.admit();
             self.refresh_stats();
         }
@@ -1124,11 +1171,22 @@ impl CoreService {
                     runtime.checking = None;
                 }
             }
-            if !data.closing && !cancel.is_cancelled()
-                && data.runtime.get(&queued.id).is_some_and(|runtime| runtime.generation == queued.generation)
+            if !data.closing
+                && !cancel.is_cancelled()
+                && data
+                    .runtime
+                    .get(&queued.id)
+                    .is_some_and(|runtime| runtime.generation == queued.generation)
             {
-                if let Some(job) = data.jobs.iter_mut().find(|job| job.id() == queued.id && job.input.monitor_status) {
-                    if !job.input.in_monitor_window(chrono::Local::now().naive_local()) {
+                if let Some(job) = data
+                    .jobs
+                    .iter_mut()
+                    .find(|job| job.id() == queued.id && job.input.monitor_status)
+                {
+                    if !job
+                        .input
+                        .in_monitor_window(chrono::Local::now().naive_local())
+                    {
                         if job.recording_started_at.is_empty() {
                             job.status_info = SCHEDULED.into();
                         }
@@ -1184,7 +1242,15 @@ impl CoreService {
             if !matches {
                 return;
             }
-            let elapsed = data.runtime.get_mut(job.id()).unwrap().recording.take().unwrap().started.elapsed();
+            let elapsed = data
+                .runtime
+                .get_mut(job.id())
+                .unwrap()
+                .recording
+                .take()
+                .unwrap()
+                .started
+                .elapsed();
             let closing = data.closing;
             let Some(current) = data
                 .jobs

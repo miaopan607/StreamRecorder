@@ -58,11 +58,16 @@ pub struct WindowState {
 }
 impl Default for WindowState {
     fn default() -> Self {
-        Self { width: 1380.0, height: 860.0, maximized: false }
+        Self {
+            width: 1380.0,
+            height: 860.0,
+            maximized: false,
+        }
     }
 }
 pub fn load_window(path: &Path) -> WindowState {
-    fs::read(path).ok()
+    fs::read(path)
+        .ok()
         .and_then(|bytes| serde_json::from_slice(&bytes).ok())
         .unwrap_or_default()
 }

@@ -104,13 +104,13 @@ export default function TasksPage() {
           {job.monitor_status ? "停止" : "监控"}
         </button>
         <button
-          disabled={!job.recording_dir && !job.latest_output_path && !connected}
+          disabled={disabled}
           onClick={() => void action(job.id, () => openJobFolder(job.id))}
         >
           目录
         </button>
         <button
-          disabled={!job.latest_output_path}
+          disabled={disabled || !job.latest_output_path}
           onClick={() => void action(job.id, () => openLatestFile(job.id))}
         >
           播放

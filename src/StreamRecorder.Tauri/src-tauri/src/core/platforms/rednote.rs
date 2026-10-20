@@ -68,10 +68,7 @@ pub(super) async fn probe(ctx: &ProbeContext, input: &ProbeInput) -> Result<Stre
             }
         }
     }
-    let resolved_url = data
-        .live_url
-        .as_deref()
-        .expect("小红书重定向 URL 已设置");
+    let resolved_url = data.live_url.as_deref().expect("小红书重定向 URL 已设置");
     let id = capture(r"/user/profile/([^/?]+)", resolved_url)
         .or_else(|_| query(resolved_url, "host_id"))?;
     let html = ctx

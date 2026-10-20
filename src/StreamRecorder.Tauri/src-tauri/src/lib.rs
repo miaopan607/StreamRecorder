@@ -2,10 +2,10 @@ mod core;
 mod desktop;
 mod paths;
 mod ui_state;
-use core::{CoreService, models::*};
-use serde::Serialize;
+use core::{models::*, CoreService};
 use parking_lot::Mutex;
 use paths::ProjectPaths;
+use serde::Serialize;
 use serde_json::{json, Value};
 use std::{
     collections::BTreeMap,
@@ -31,7 +31,10 @@ async fn health_ping(state: State<'_, DesktopState>) -> Result<PingReply, String
     state.core.health_ping()
 }
 #[tauri::command]
-async fn settings_update(settings: CoreSettings, state: State<'_, DesktopState>) -> Result<SettingsReply, String> {
+async fn settings_update(
+    settings: CoreSettings,
+    state: State<'_, DesktopState>,
+) -> Result<SettingsReply, String> {
     state.core.settings_update(settings).await
 }
 #[tauri::command]
@@ -39,7 +42,10 @@ async fn cookies_get(state: State<'_, DesktopState>) -> Result<CookiesReply, Str
     state.core.cookies_get()
 }
 #[tauri::command]
-async fn cookies_update(cookies: BTreeMap<String, String>, state: State<'_, DesktopState>) -> Result<CookiesReply, String> {
+async fn cookies_update(
+    cookies: BTreeMap<String, String>,
+    state: State<'_, DesktopState>,
+) -> Result<CookiesReply, String> {
     state.core.cookies_update(cookies).await
 }
 #[tauri::command]
@@ -47,27 +53,45 @@ async fn accounts_get(state: State<'_, DesktopState>) -> Result<AccountsReply, S
     state.core.accounts_get()
 }
 #[tauri::command]
-async fn accounts_update(accounts: BTreeMap<String, Value>, state: State<'_, DesktopState>) -> Result<AccountsReply, String> {
+async fn accounts_update(
+    accounts: BTreeMap<String, Value>,
+    state: State<'_, DesktopState>,
+) -> Result<AccountsReply, String> {
     state.core.accounts_update(accounts).await
 }
 #[tauri::command]
-async fn jobs_upsert(jobs: Vec<JobInput>, state: State<'_, DesktopState>) -> Result<UpsertReply, String> {
+async fn jobs_upsert(
+    jobs: Vec<JobInput>,
+    state: State<'_, DesktopState>,
+) -> Result<UpsertReply, String> {
     state.core.jobs_upsert(jobs).await
 }
 #[tauri::command]
-async fn jobs_delete(ids: Vec<String>, state: State<'_, DesktopState>) -> Result<DeleteReply, String> {
+async fn jobs_delete(
+    ids: Vec<String>,
+    state: State<'_, DesktopState>,
+) -> Result<DeleteReply, String> {
     state.core.jobs_delete(ids).await
 }
 #[tauri::command]
-async fn jobs_start_monitoring(ids: Vec<String>, state: State<'_, DesktopState>) -> Result<MonitoringReply, String> {
+async fn jobs_start_monitoring(
+    ids: Vec<String>,
+    state: State<'_, DesktopState>,
+) -> Result<MonitoringReply, String> {
     state.core.jobs_start_monitoring(ids).await
 }
 #[tauri::command]
-async fn jobs_stop_monitoring(ids: Vec<String>, state: State<'_, DesktopState>) -> Result<MonitoringReply, String> {
+async fn jobs_stop_monitoring(
+    ids: Vec<String>,
+    state: State<'_, DesktopState>,
+) -> Result<MonitoringReply, String> {
     state.core.jobs_stop_monitoring(ids).await
 }
 #[tauri::command]
-async fn jobs_recheck(ids: Vec<String>, state: State<'_, DesktopState>) -> Result<RecheckReply, String> {
+async fn jobs_recheck(
+    ids: Vec<String>,
+    state: State<'_, DesktopState>,
+) -> Result<RecheckReply, String> {
     state.core.jobs_recheck(ids)
 }
 #[derive(Serialize)]
@@ -85,9 +109,15 @@ async fn desktop_bootstrap(state: State<'_, DesktopState>) -> Result<DesktopBoot
     let _ = state.core.wait_ready().await;
     state.renderer_ready.store(true, Ordering::Release);
     let dependencies = core::dependencies::inspect().await;
-    state.core.set_ffmpeg_available(dependencies["ffmpeg"]["available"].as_bool().unwrap_or(false));
+    state.core.set_ffmpeg_available(
+        dependencies["ffmpeg"]["available"]
+            .as_bool()
+            .unwrap_or(false),
+    );
     let path = state.paths.data_root.join("desktop_ui_state.json");
-    let ui_state = tokio::task::spawn_blocking(move || ui_state::load(&path)).await.map_err(|error| error.to_string())?;
+    let ui_state = tokio::task::spawn_blocking(move || ui_state::load(&path))
+        .await
+        .map_err(|error| error.to_string())?;
     Ok(DesktopBootstrap {
         core: state.core.bootstrap(),
         dependencies,
@@ -111,38 +141,61 @@ fn set_autostart(enabled: bool) -> Result<(), String> {
 #[tauri::command]
 async fn refresh_dependencies(state: State<'_, DesktopState>) -> Result<Value, String> {
     let deps = core::dependencies::inspect().await;
-    state.core.set_ffmpeg_available(deps["ffmpeg"]["available"].as_bool().unwrap_or(false));
+    state
+        .core
+        .set_ffmpeg_available(deps["ffmpeg"]["available"].as_bool().unwrap_or(false));
     Ok(deps)
 }
 #[tauri::command]
 fn open_data_folder(state: State<'_, DesktopState>) -> Result<(), String> {
     desktop::open_path(&state.paths.data_root)
 }
+fn recovered_output(
+    state: &DesktopState,
+    id: &str,
+    job: &RecordingJob,
+    settings: &CoreSettings,
+) -> Option<PathBuf> {
+    let previous = job.latest_output_path.as_str();
+    if !previous.is_empty() {
+        if let Some(path) = paths::latest_file(&state.paths.resolve(previous)) {
+            return Some(path);
+        }
+    }
+    let path = core::recording::recover_latest_output(&state.paths, settings, job)?;
+    state
+        .core
+        .remember_latest_output(id, previous, path.clone());
+    Some(path)
+}
 fn job_path(state: &DesktopState, id: &str, latest: bool) -> Result<PathBuf, String> {
     let job = state.core.job(id).ok_or("任务不存在")?;
-    let output = job.latest_output_path.as_str();
-    if latest {
-        return if output.is_empty() {
-            Err("当前任务还没有可播放的录制文件".into())
-        } else {
-            paths::latest_file(&state.paths.resolve(output))
-                .ok_or("当前任务还没有可播放的录制文件".into())
-        };
-    }
-    if !output.is_empty() {
-        if let Some(parent) = state.paths.resolve(output).parent() {
+    let settings = state.core.snapshot().settings;
+    let previous = job.latest_output_path.as_str();
+    if let Some(output) = recovered_output(state, id, &job, &settings) {
+        if latest {
+            return Ok(output);
+        }
+        if let Some(parent) = output.parent() {
             return Ok(parent.to_path_buf());
         }
     }
-    let specific = job.input.recording_dir.as_str();
-    let snapshot = state.core.snapshot();
-    let global = snapshot.settings.live_save_path.as_str();
+    if latest {
+        return Err("当前任务还没有可播放的录制文件".into());
+    }
+    if !previous.is_empty() {
+        if let Some(parent) = state.paths.resolve(&previous).parent() {
+            return Ok(parent.to_path_buf());
+        }
+    }
+    let specific = job.input.recording_dir.trim();
+    let global = settings.live_save_path.trim();
     Ok(if !specific.is_empty() {
         state.paths.resolve(specific)
     } else if !global.is_empty() {
         state.paths.resolve(global)
     } else {
-        state.paths.data_root.join("recordings")
+        core::recording::output_base(&state.paths, &settings)
     })
 }
 #[tauri::command]
@@ -234,8 +287,11 @@ async fn shutdown(app: &tauri::AppHandle) {
     }
     let path = state.paths.data_root.join("window_state.json");
     let geometry = *state.window_state.lock();
-    let result = tokio::task::spawn_blocking(move || core::config::save_json(&path, &geometry, false)).await;
-    if let Ok(Err(error)) = result { state.core.log(&format!("窗口尺寸保存失败：{error}")); }
+    let result =
+        tokio::task::spawn_blocking(move || core::config::save_json(&path, &geometry, false)).await;
+    if let Ok(Err(error)) = result {
+        state.core.log(&format!("窗口尺寸保存失败：{error}"));
+    }
     state.core.shutdown().await;
     desktop::stop_tray(state.tray.swap(0, Ordering::AcqRel));
     app.exit(0);
@@ -283,9 +339,7 @@ pub fn run() {
             finish_exit
         ])
         .setup(move |app| {
-            paths
-                .prepare()
-                .map_err(std::io::Error::other)?;
+            paths.prepare().map_err(std::io::Error::other)?;
             let client = CoreService::new(paths.clone(), Some(app.handle().clone()));
             app.manage(DesktopState {
                 paths: paths.clone(),
@@ -294,7 +348,9 @@ pub fn run() {
                 exit_request: Mutex::new(None),
                 exiting: AtomicBool::new(false),
                 tray: AtomicUsize::new(0),
-                window_state: Mutex::new(ui_state::load_window(&paths.data_root.join("window_state.json"))),
+                window_state: Mutex::new(ui_state::load_window(
+                    &paths.data_root.join("window_state.json"),
+                )),
             });
             let icon_path = paths.data_root.join("app.ico");
             std::fs::write(&icon_path, include_bytes!("../icons/StreamRecorder.ico"))?;
@@ -374,7 +430,8 @@ pub fn run() {
                     client.log(&e)
                 }
                 let starting = client.clone();
-                let result = tauri::async_runtime::spawn(async move { starting.start().await }).await;
+                let result =
+                    tauri::async_runtime::spawn(async move { starting.start().await }).await;
                 if let Err(error) = result {
                     client.startup_failed(&format!("核心初始化任务异常结束：{error}"));
                 }

@@ -47,10 +47,7 @@ fn compatibility_query_empty_values() {
         query("https://example.org/live?id=&id=10001&id=20002", "id").unwrap(),
         "10001"
     );
-    assert_eq!(
-        query("https://example.org/live?id=%20", "id").unwrap(),
-        " "
-    );
+    assert_eq!(query("https://example.org/live?id=%20", "id").unwrap(), " ");
     assert_eq!(
         query("https://example.org/live?id=%E4%B8%AD%E6%96%87", "id").unwrap(),
         "中文"
@@ -375,19 +372,29 @@ async fn compatibility_offline_netease_missing_nicknames() {
         "netease",
         "https://cc.163.com/10001",
         vec![reply("/10001/", &body)],
-    ).await.unwrap();
+    )
+    .await
+    .unwrap();
     assert!(!data.is_live);
     assert_eq!(data.anchor_name, None);
     assert_eq!(data.record_url, None);
 
-    for live in [serde_json::json!({}), serde_json::json!({"status":null}), serde_json::json!({"status":"unknown"})] {
+    for live in [
+        serde_json::json!({}),
+        serde_json::json!({"status":null}),
+        serde_json::json!({"status":"unknown"}),
+    ] {
         let body = format!(
             "<script id=\"__NEXT_DATA__\" type=\"application/json\" crossorigin=\"anonymous\">{}</script></body>",
             serde_json::json!({"props":{"pageProps":{"roomInfoInitData":{"live":live}}}})
         );
         assert!(run_probe(
-            "netease", "https://cc.163.com/10001", vec![reply("/10001/", &body)],
-        ).await.is_err());
+            "netease",
+            "https://cc.163.com/10001",
+            vec![reply("/10001/", &body)],
+        )
+        .await
+        .is_err());
     }
 }
 
@@ -395,89 +402,143 @@ async fn compatibility_offline_netease_missing_nicknames() {
 async fn compatibility_offline_sixroom_null_stream_title() {
     let body = serde_json::json!({
         "content": {"liveinfo":{"flvtitle":null},"roominfo":{"alias":"当前主播"}}
-    }).to_string();
+    })
+    .to_string();
     let routes = vec![
         reply("/10001", "rid: '10001',\n roomid"),
         reply("/coop/mobile/index.php", &body),
     ];
-    let data = run_probe("6room", "https://v.6.cn/10001", routes).await.unwrap();
+    let data = run_probe("6room", "https://v.6.cn/10001", routes)
+        .await
+        .unwrap();
     assert!(!data.is_live);
     assert_eq!(data.anchor_name.as_deref(), Some("当前主播"));
     assert_eq!(data.record_url, None);
 
-    let body = serde_json::json!({"content":{"liveinfo":{},"roominfo":{"alias":"当前主播"}}}).to_string();
-    assert!(run_probe("6room", "https://v.6.cn/10001", vec![
-        reply("/10001", "rid: '10001',\n roomid"),
-        reply("/coop/mobile/index.php", &body),
-    ]).await.is_err());
+    let body =
+        serde_json::json!({"content":{"liveinfo":{},"roominfo":{"alias":"当前主播"}}}).to_string();
+    assert!(run_probe(
+        "6room",
+        "https://v.6.cn/10001",
+        vec![
+            reply("/10001", "rid: '10001',\n roomid"),
+            reply("/coop/mobile/index.php", &body),
+        ]
+    )
+    .await
+    .is_err());
 }
 
 #[tokio::test]
 async fn compatibility_offline_vvxq_null_name_uses_secondary_profile() {
     let routes = vec![
         reply("/room/video/getRoomData.do", r#"{"status":0}"#),
-        reply("/activity-center/fanclub/activity/captain/banner", r#"{"data":{"anchorName":null}}"#),
-        reply("/activity-center/halloween2023/banner", r#"{"data":{"memberVO":{"memberName":"回退主播"}}}"#),
+        reply(
+            "/activity-center/fanclub/activity/captain/banner",
+            r#"{"data":{"anchorName":null}}"#,
+        ),
+        reply(
+            "/activity-center/halloween2023/banner",
+            r#"{"data":{"memberVO":{"memberName":"回退主播"}}}"#,
+        ),
     ];
     let data = run_probe(
-        "vvxq", "https://h5webcdn-pro.vvxqiu.com/?roomId=10001", routes,
-    ).await.unwrap();
+        "vvxq",
+        "https://h5webcdn-pro.vvxqiu.com/?roomId=10001",
+        routes,
+    )
+    .await
+    .unwrap();
     assert!(!data.is_live);
     assert_eq!(data.anchor_name.as_deref(), Some("回退主播"));
     assert_eq!(data.record_url, None);
 
     assert!(run_probe(
-        "vvxq", "https://h5webcdn-pro.vvxqiu.com/?roomId=10001", vec![
+        "vvxq",
+        "https://h5webcdn-pro.vvxqiu.com/?roomId=10001",
+        vec![
             reply("/room/video/getRoomData.do", r#"{"status":0}"#),
-            reply("/activity-center/fanclub/activity/captain/banner", r#"{"data":{}}"#),
-            reply("/activity-center/halloween2023/banner", r#"{"data":{"memberVO":{"memberName":"回退主播"}}}"#),
+            reply(
+                "/activity-center/fanclub/activity/captain/banner",
+                r#"{"data":{}}"#
+            ),
+            reply(
+                "/activity-center/halloween2023/banner",
+                r#"{"data":{"memberVO":{"memberName":"回退主播"}}}"#
+            ),
         ],
-    ).await.is_err());
+    )
+    .await
+    .is_err());
 }
 
 #[tokio::test]
 async fn compatibility_offline_bigo_null_nickname() {
     let data = run_probe(
-        "bigo", "https://www.bigo.tv/10001", vec![reply(
-            "/official_website/studio/getInternalStudioInfo", r#"{"data":{"alive":0,"nick_name":null}}"#,
+        "bigo",
+        "https://www.bigo.tv/10001",
+        vec![reply(
+            "/official_website/studio/getInternalStudioInfo",
+            r#"{"data":{"alive":0,"nick_name":null}}"#,
         )],
-    ).await.unwrap();
+    )
+    .await
+    .unwrap();
     assert!(!data.is_live);
     assert_eq!(data.anchor_name, None);
     assert_eq!(data.record_url, None);
     // 显式空字符串仍应走旧主页昵称回退；null 不应触发这条请求。
     let data = run_probe(
-        "bigo", "https://www.bigo.tv/sg/10001", vec![
-            reply("/official_website/studio/getInternalStudioInfo", r#"{"data":{"alive":0,"nick_name":""}}"#),
+        "bigo",
+        "https://www.bigo.tv/sg/10001",
+        vec![
+            reply(
+                "/official_website/studio/getInternalStudioInfo",
+                r#"{"data":{"alive":0,"nick_name":""}}"#,
+            ),
             reply("/sg/10001", "<title>欢迎来到主页主播的直播间</title>"),
         ],
-    ).await.unwrap();
+    )
+    .await
+    .unwrap();
     assert!(!data.is_live);
     assert_eq!(data.anchor_name.as_deref(), Some("主页主播"));
 
     assert!(run_probe(
-        "bigo", "https://www.bigo.tv/10001", vec![reply(
-            "/official_website/studio/getInternalStudioInfo", r#"{"data":{"alive":0}}"#,
+        "bigo",
+        "https://www.bigo.tv/10001",
+        vec![reply(
+            "/official_website/studio/getInternalStudioInfo",
+            r#"{"data":{"alive":0}}"#,
         )],
-    ).await.is_err());
+    )
+    .await
+    .is_err());
 }
 
 #[tokio::test]
 async fn compatibility_offline_showroom_null_room_name() {
     let data = run_probe(
-        "showroom", "https://www.showroom-live.com/room/profile?room_id=10001", vec![reply(
-            "/api/live/live_info", r#"{"live_status":0,"room_name":null}"#,
+        "showroom",
+        "https://www.showroom-live.com/room/profile?room_id=10001",
+        vec![reply(
+            "/api/live/live_info",
+            r#"{"live_status":0,"room_name":null}"#,
         )],
-    ).await.unwrap();
+    )
+    .await
+    .unwrap();
     assert!(!data.is_live);
     assert_eq!(data.anchor_name, None);
     assert_eq!(data.record_url, None);
 
     assert!(run_probe(
-        "showroom", "https://www.showroom-live.com/room/profile?room_id=10001", vec![reply(
-            "/api/live/live_info", r#"{"live_status":0}"#,
-        )],
-    ).await.is_err());
+        "showroom",
+        "https://www.showroom-live.com/room/profile?room_id=10001",
+        vec![reply("/api/live/live_info", r#"{"live_status":0}"#,)],
+    )
+    .await
+    .is_err());
 }
 
 fn taobao_routes(expected_id: &str) -> Vec<Reply> {
@@ -520,13 +581,9 @@ async fn compatibility_taobao_empty_id() {
     );
     let mut routes = vec![page];
     routes.extend(taobao_routes("10001"));
-    let data = run_probe(
-        "taobao",
-        "https://tb.cn/legacy?id=&liveId=",
-        routes,
-    )
-    .await
-    .unwrap();
+    let data = run_probe("taobao", "https://tb.cn/legacy?id=&liveId=", routes)
+        .await
+        .unwrap();
     assert!(data.is_live);
     assert_eq!(
         data.record_url.as_deref(),
@@ -660,7 +717,10 @@ async fn compatibility_rednote_ended_room_does_not_follow_recommendation() {
     assert!(data.m3u8_url.is_none());
     assert!(data.flv_url.is_none());
 
-    for pointer in ["/liveStream/pageStatus", "/liveStream/roomData/roomInfo/status"] {
+    for pointer in [
+        "/liveStream/pageStatus",
+        "/liveStream/roomData/roomInfo/status",
+    ] {
         let mut invalid = state.clone();
         *invalid.pointer_mut(pointer).unwrap() = Value::Null;
         let body = format!("<script>window.__INITIAL_STATE__={invalid}</script>");
@@ -963,17 +1023,42 @@ async fn cancellation_closes_pending_http_request() {
 #[tokio::test]
 async fn release_platform_urls_reach_their_parsers() {
     for (platform, url, corpus, source) in [
-        ("soop", "https://play.sooplive.com/user/123", CORPORA[3], "soop"),
-        ("taobao", "https://tbzb.taobao.com/live?liveId=10001", CORPORA[4], "taobao"),
-        ("xindongrebo", "https://xcqrkj.com/10001", CORPORA[0], "qiandurebo"),
+        (
+            "soop",
+            "https://play.sooplive.com/user/123",
+            CORPORA[3],
+            "soop",
+        ),
+        (
+            "taobao",
+            "https://tbzb.taobao.com/live?liveId=10001",
+            CORPORA[4],
+            "taobao",
+        ),
+        (
+            "xindongrebo",
+            "https://xcqrkj.com/10001",
+            CORPORA[0],
+            "qiandurebo",
+        ),
     ] {
-        let fixture = serde_json::from_str::<Vec<Fixture>>(corpus).unwrap()
-            .into_iter().find(|fixture| fixture.platform == source).unwrap();
+        let fixture = serde_json::from_str::<Vec<Fixture>>(corpus)
+            .unwrap()
+            .into_iter()
+            .find(|fixture| fixture.platform == source)
+            .unwrap();
         let job = super::super::models::RecordingJob::new(JobInput {
-            url: url.into(), ..JobInput::default()
+            url: url.into(),
+            ..JobInput::default()
         });
         assert_eq!(job.platform_key, platform);
-        let stream = run_probe(&job.platform_key, url, fixture.live).await.unwrap();
-        compare(platform, &serde_json::to_value(stream).unwrap(), &fixture.expected_live);
+        let stream = run_probe(&job.platform_key, url, fixture.live)
+            .await
+            .unwrap();
+        compare(
+            platform,
+            &serde_json::to_value(stream).unwrap(),
+            &fixture.expected_live,
+        );
     }
 }

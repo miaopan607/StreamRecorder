@@ -20,12 +20,7 @@ pub(super) async fn probe(ctx: &ProbeContext, input: &ProbeInput) -> Result<Stre
         .or_else(|| room.get("nickname"))
         .filter(|name| !name.is_null())
         .map(text);
-    let mut data = StreamData::new(
-        input,
-        "网易CC直播",
-        String::new(),
-        status == 1,
-    );
+    let mut data = StreamData::new(input, "网易CC直播", String::new(), status == 1);
     data.anchor_name = name;
     data.live_url = Some(url);
     if data.is_live {

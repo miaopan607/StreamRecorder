@@ -116,17 +116,20 @@ fn legacy_directory(
                 .is_some_and(|short| name == sanitize(short))
     })
 }
+pub fn output_base(paths: &ProjectPaths, settings: &CoreSettings) -> PathBuf {
+    if settings.live_save_path.trim().is_empty() {
+        paths.data_root.join("recordings")
+    } else {
+        paths.resolve(settings.live_save_path.trim())
+    }
+}
 pub fn output_directory(
     paths: &ProjectPaths,
     settings: &CoreSettings,
     job: &RecordingJob,
     stream: &StreamData,
 ) -> PathBuf {
-    let base = if settings.live_save_path.trim().is_empty() {
-        paths.data_root.join("recordings")
-    } else {
-        paths.resolve(settings.live_save_path.trim())
-    };
+    let base = output_base(paths, settings);
     if !job.input.recording_dir.is_empty() {
         let directory = paths.resolve(&job.input.recording_dir);
         let layout = settings.folder_name_platform
@@ -164,6 +167,153 @@ pub fn output_directory(
         }
     }
     directory
+}
+fn recovery_path_has(path: &Path, root: &Path, marker: &str) -> bool {
+    if marker.is_empty() {
+        return false;
+    }
+    let relative = path.strip_prefix(root).unwrap_or(path);
+    relative.components().any(|component| {
+        component
+            .as_os_str()
+            .to_string_lossy()
+            .eq_ignore_ascii_case(marker)
+    }) || path
+        .file_name()
+        .map(|name| name.to_string_lossy().contains(marker))
+        .unwrap_or(false)
+}
+fn is_recording_file(path: &Path, configured: &str) -> bool {
+    let Some(extension) = path.extension().map(|value| value.to_string_lossy()) else {
+        return false;
+    };
+    extension.eq_ignore_ascii_case(configured)
+        || ["ts", "flv", "mp4", "mkv", "mov", "nut", "mp3", "m4a"]
+            .iter()
+            .any(|value| extension.eq_ignore_ascii_case(value))
+}
+fn scan_recovery_root(
+    path: &Path,
+    root: &Path,
+    explicit: bool,
+    depth: usize,
+    settings: &CoreSettings,
+    configured: &str,
+    anchor_marker: &str,
+    platform_markers: &[String],
+    best: &mut Option<(i32, u128, PathBuf)>,
+) {
+    if depth > 12 {
+        return;
+    }
+    let Ok(entries) = fs::read_dir(path) else {
+        return;
+    };
+    for entry in entries.flatten() {
+        let child = entry.path();
+        let Ok(file_type) = entry.file_type() else {
+            continue;
+        };
+        if file_type.is_dir() {
+            scan_recovery_root(
+                &child,
+                root,
+                explicit,
+                depth + 1,
+                settings,
+                configured,
+                anchor_marker,
+                platform_markers,
+                best,
+            );
+            continue;
+        }
+        if !file_type.is_file() || !is_recording_file(&child, configured) {
+            continue;
+        }
+        let Ok(metadata) = entry.metadata() else {
+            continue;
+        };
+        if metadata.len() == 0 {
+            continue;
+        }
+        let anchor_hit = recovery_path_has(&child, root, anchor_marker);
+        let platform_hit = platform_markers
+            .iter()
+            .any(|marker| recovery_path_has(&child, root, marker));
+        let needs_anchor = settings.folder_name_author
+            || settings.custom_filename_template.contains("{anchor_name}");
+        if !explicit && ((!anchor_hit && !platform_hit) || (needs_anchor && !anchor_hit)) {
+            continue;
+        }
+        let modified = metadata
+            .modified()
+            .ok()
+            .and_then(|value| value.duration_since(std::time::UNIX_EPOCH).ok())
+            .map(|value| value.as_millis())
+            .unwrap_or_default();
+        let mut score = if explicit { 1000 } else { 0 };
+        if anchor_hit {
+            score += 50;
+        }
+        if platform_hit {
+            score += 20;
+        }
+        if child
+            .file_name()
+            .map(|name| name.to_string_lossy().contains(anchor_marker))
+            .unwrap_or(false)
+        {
+            score += 10;
+        }
+        let replace = best.as_ref().is_none_or(|(old_score, old_modified, _)| {
+            (score, modified) > (*old_score, *old_modified)
+        });
+        if replace {
+            *best = Some((score, modified, child));
+        }
+    }
+}
+pub fn recover_latest_output(
+    paths: &ProjectPaths,
+    settings: &CoreSettings,
+    job: &RecordingJob,
+) -> Option<PathBuf> {
+    let base = output_base(paths, settings);
+    let specific = job.input.recording_dir.trim();
+    let configured = nonempty(
+        Some(job.input.record_format.trim()),
+        nonempty(Some(settings.video_format.trim()), "TS"),
+    );
+    let mut roots = Vec::new();
+    if !specific.is_empty() {
+        roots.push((paths.resolve(specific), true));
+    }
+    if roots.iter().all(|(path, _)| path != &base) {
+        roots.push((base, false));
+    }
+    let anchor_marker = sanitize(&job.input.streamer_name);
+    let mut platform_markers = vec![sanitize(&job.platform), sanitize(&job.platform_key)];
+    let mut title = job.platform_key.clone();
+    if let Some(first) = title.get_mut(..1) {
+        first.make_ascii_uppercase();
+    }
+    platform_markers.push(sanitize(&title));
+    let mut best = None;
+    for (root, explicit) in roots {
+        scan_recovery_root(
+            &root,
+            &root,
+            explicit,
+            0,
+            settings,
+            configured,
+            &anchor_marker,
+            &platform_markers,
+            &mut best,
+        );
+    }
+    best.map(|(_, _, path)| path)
 }
 pub fn base_name(settings: &CoreSettings, job: &RecordingJob, stream: &StreamData) -> String {
     let time = chrono::Local::now().format("%Y-%m-%d_%H-%M-%S").to_string();
@@ -414,9 +564,12 @@ pub fn outputs(pattern: &Path) -> Vec<PathBuf> {
         .filter_map(|entry| {
             let entry = entry.ok()?;
             let path = entry.path();
-            (entry.file_name().to_str().is_some_and(|name| {
-                name.starts_with(prefix) && name.ends_with(suffix)
-            }) && path.is_file()).then_some(path)
+            (entry
+                .file_name()
+                .to_str()
+                .is_some_and(|name| name.starts_with(prefix) && name.ends_with(suffix))
+                && path.is_file())
+            .then_some(path)
         })
         .collect::<Vec<_>>();
     paths.sort();

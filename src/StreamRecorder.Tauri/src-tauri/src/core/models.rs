@@ -246,30 +246,39 @@ impl JobInput {
         if !self.scheduled_recording {
             return true;
         }
-        self.scheduled_start_time.split(',').zip(self.monitor_hours.split(',')).any(|(start, hours)| {
-            let Some(hours) = hours.trim().parse::<f64>().ok()
-                .filter(|value| value.is_finite() && *value > 0.0) else {
-                return false;
-            };
-            let Some(duration) = chrono::Duration::try_seconds((hours * 3600.0) as i64) else {
-                return false;
-            };
-            let start = start.trim();
-            if let Ok(start) = chrono::NaiveDateTime::parse_from_str(start, "%Y-%m-%d %H:%M:%S") {
-                return now >= start && now.signed_duration_since(start) < duration;
-            }
-            let Ok(time) = chrono::NaiveTime::parse_from_str(start, "%H:%M:%S")
-                .or_else(|_| chrono::NaiveTime::parse_from_str(start, "%H:%M")) else {
-                return false;
-            };
-            let today = now.date().and_time(time);
-            let elapsed = if now >= today {
-                now.signed_duration_since(today)
-            } else {
-                now.signed_duration_since(today - chrono::Duration::days(1))
-            };
-            elapsed < duration
-        })
+        self.scheduled_start_time
+            .split(',')
+            .zip(self.monitor_hours.split(','))
+            .any(|(start, hours)| {
+                let Some(hours) = hours
+                    .trim()
+                    .parse::<f64>()
+                    .ok()
+                    .filter(|value| value.is_finite() && *value > 0.0)
+                else {
+                    return false;
+                };
+                let Some(duration) = chrono::Duration::try_seconds((hours * 3600.0) as i64) else {
+                    return false;
+                };
+                let start = start.trim();
+                if let Ok(start) = chrono::NaiveDateTime::parse_from_str(start, "%Y-%m-%d %H:%M:%S")
+                {
+                    return now >= start && now.signed_duration_since(start) < duration;
+                }
+                let Ok(time) = chrono::NaiveTime::parse_from_str(start, "%H:%M:%S")
+                    .or_else(|_| chrono::NaiveTime::parse_from_str(start, "%H:%M"))
+                else {
+                    return false;
+                };
+                let today = now.date().and_time(time);
+                let elapsed = if now >= today {
+                    now.signed_duration_since(today)
+                } else {
+                    now.signed_duration_since(today - chrono::Duration::days(1))
+                };
+                elapsed < duration
+            })
     }
 }
 #[derive(Clone, Debug, Serialize)]
@@ -351,7 +360,10 @@ impl RecordingJob {
         }
         if self.recording_started_at.is_empty() {
             self.status_info = if self.input.monitor_status {
-                if self.input.in_monitor_window(chrono::Local::now().naive_local()) {
+                if self
+                    .input
+                    .in_monitor_window(chrono::Local::now().naive_local())
+                {
                     MONITORING
                 } else {
                     SCHEDULED
@@ -440,10 +452,19 @@ mod tests {
             monitor_hours: "1.5,2".into(),
             ..JobInput::default()
         };
-        for value in ["2026-10-19 09:00:00", "2026-10-19 10:29:59", "2026-10-20 00:30:00", "2026-10-20 09:15:00"] {
+        for value in [
+            "2026-10-19 09:00:00",
+            "2026-10-19 10:29:59",
+            "2026-10-20 00:30:00",
+            "2026-10-20 09:15:00",
+        ] {
             assert!(input.in_monitor_window(at(value)), "{value}");
         }
-        for value in ["2026-10-19 08:59:59", "2026-10-19 10:30:00", "2026-10-20 01:30:00"] {
+        for value in [
+            "2026-10-19 08:59:59",
+            "2026-10-19 10:30:00",
+            "2026-10-20 01:30:00",
+        ] {
             assert!(!input.in_monitor_window(at(value)), "{value}");
         }
     }

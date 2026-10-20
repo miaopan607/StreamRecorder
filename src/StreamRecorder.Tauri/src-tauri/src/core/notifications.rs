@@ -147,8 +147,10 @@ impl NotificationService {
         let explicit = response.get("success").and_then(Value::as_bool) == Some(true);
         let success = match channel {
             "钉钉" => response.get("errcode").and_then(Value::as_i64) == Some(0) || explicit,
-            "飞书" => response.get("code").and_then(Value::as_i64) == Some(0)
-                || response.get("StatusCode").and_then(Value::as_i64) == Some(0),
+            "飞书" => {
+                response.get("code").and_then(Value::as_i64) == Some(0)
+                    || response.get("StatusCode").and_then(Value::as_i64) == Some(0)
+            }
             "微信" | "Bark" => {
                 response.get("code").and_then(Value::as_i64) == Some(200) || explicit
             }
@@ -196,7 +198,10 @@ impl NotificationService {
             }
             "飞书" => {
                 for url in entries(&settings.feishu_webhook_url) {
-                    requests.push((url.to_owned(), json!({"msg_type":"text","content":{"text":content}})));
+                    requests.push((
+                        url.to_owned(),
+                        json!({"msg_type":"text","content":{"text":content}}),
+                    ));
                 }
             }
             "微信" => {
@@ -386,8 +391,16 @@ mod tests {
     #[tokio::test]
     async fn http_success_requires_business_ack_and_redacts_message() {
         for (channel, body, code) in [
-            ("Bark", r#"{"code":401,"message":"fixture-sensitive-token"}"#, Some("401")),
-            ("飞书", r#"{"code":19024,"msg":"fixture-sensitive-token"}"#, Some("19024")),
+            (
+                "Bark",
+                r#"{"code":401,"message":"fixture-sensitive-token"}"#,
+                Some("401"),
+            ),
+            (
+                "飞书",
+                r#"{"code":19024,"msg":"fixture-sensitive-token"}"#,
+                Some("19024"),
+            ),
             ("飞书", r#"{"code":0}"#, None),
         ] {
             let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
@@ -427,11 +440,15 @@ mod tests {
                 ..CoreSettings::default()
             };
             let service = Arc::new(NotificationService::default());
-            let errors = service.send(
-                Arc::new(settings),
-                RecordingJob::new(super::super::models::JobInput::default()),
-                NotificationEvent::Start, None, CancellationToken::new(),
-            ).await;
+            let errors = service
+                .send(
+                    Arc::new(settings),
+                    RecordingJob::new(super::super::models::JobInput::default()),
+                    NotificationEvent::Start,
+                    None,
+                    CancellationToken::new(),
+                )
+                .await;
             if let Some(code) = code {
                 assert_eq!(errors.len(), 1);
                 assert!(errors[0].contains(code));

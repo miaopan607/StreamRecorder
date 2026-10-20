@@ -95,6 +95,36 @@ it("任务乙请求完成不会解锁仍在执行的任务甲", async () => {
   }
 });
 
+it("没有录制文件时禁用播放，有文件时启用", async () => {
+  const initial = store.state;
+  store.update({
+    loaded: true,
+    core: { status: "connected", error: "", revision: 1 },
+    snapshot,
+    selected: new Set(),
+    ui: { IsCardLayout: true, VisibleColumns: {} },
+  });
+  try {
+    const view = render(<TasksPage />);
+    const entry = view.container.querySelector("article") as HTMLElement;
+    const play = within(entry).getByRole("button", {
+      name: "播放",
+    }) as HTMLButtonElement;
+    expect(play.disabled).toBe(true);
+    await act(async () => {
+      store.update({
+        snapshot: {
+          ...snapshot,
+          jobs: [{ ...jobs[0], latest_output_path: "录制/主播.ts" }, jobs[1]],
+        },
+      });
+    });
+    expect(play.disabled).toBe(false);
+  } finally {
+    cleanup();
+    store.update(initial);
+  }
+});
 it.each([
   ["表格", false],
   ["卡片", true],
